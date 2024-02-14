@@ -11,14 +11,5 @@ namespace SysBot.Pokemon.Discord
         {
             await ReplyAsync("Pong!").ConfigureAwait(false);
         }
-
-        [Command("speak")]
-        [Alias("talk", "say")]
-        [Summary("Tells the bot to speak during times when people are on the island.")]
-        [RequireSudo]
-        public async Task SpeakAsync([Remainder] string request)
-        {
-            await ReplyAsync(request).ConfigureAwait(false);
-        }
     }
 }
