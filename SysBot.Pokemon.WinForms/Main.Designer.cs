@@ -166,7 +166,7 @@ namespace SysBot.Pokemon.WinForms
             Tab_Hub.Controls.Add(PG_Hub);
             Tab_Hub.Location = new Point(4, 35);
             Tab_Hub.Name = "Tab_Hub";
-            Tab_Hub.Padding = new Padding(3, 3, 3, 3);
+            Tab_Hub.Padding = new Padding(3);
             Tab_Hub.Size = new Size(615, 405);
             Tab_Hub.TabIndex = 2;
             Tab_Hub.Text = "Ajustes";
