@@ -33,18 +33,19 @@ namespace SysBot.Pokemon
 
             for (int i = 1; i < PKX.Generation + 1; i++)
             {
-                var versions = GameUtil.GetVersionsInGeneration(i, PKX.Generation);
+                var versions = GameUtil.GetVersionsInGeneration((byte)i, (GameVersion)PKX.Generation);
                 foreach (var v in versions)
                 {
-                    var fallback = new SimpleTrainerInfo(v)
+                    var gameVersion = v;
+                    var fallback = new SimpleTrainerInfo(gameVersion)
                     {
                         Language = lang,
                         TID16 = TID,
                         SID16 = SID,
                         OT = OT,
-                        Generation = i,
+                        Generation = (byte)i,
                     };
-                    var exist = TrainerSettings.GetSavedTrainerData(v, i, fallback);
+                    var exist = TrainerSettings.GetSavedTrainerData((byte)gameVersion, (GameVersion)(byte)i, fallback);
                     if (exist is SimpleTrainerInfo) // not anything from files; this assumes ALM returns SimpleTrainerInfo for non-user-provided fake templates.
                         TrainerSettings.Register(fallback);
                 }
@@ -74,7 +75,7 @@ namespace SysBot.Pokemon
             throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name);
         }
 
-        public static ITrainerInfo GetTrainerInfo(int gen) => TrainerSettings.GetSavedTrainerData(gen);
+        public static ITrainerInfo GetTrainerInfo(byte gen) => TrainerSettings.GetSavedTrainerData(gen);
 
         public static PKM GetLegal(this ITrainerInfo sav, IBattleTemplate set, out string res)
         {

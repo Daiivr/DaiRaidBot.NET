@@ -2,8 +2,8 @@
 {
     public static class NotRaidBot
     {
-        public const string Version = "v1.0";
-        public const string Attribution = "https://notpaldea.net";
+        public const string Version = "v2.0";
+        public const string Attribution = "https://github.com/Daiivr/DaiRaidBot.NET";
         public const string ConfigPath = "config.json";
     }
 }

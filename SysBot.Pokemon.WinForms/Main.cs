@@ -21,6 +21,7 @@ namespace SysBot.Pokemon.WinForms
 
         public readonly ISwitchConnectionAsync? SwitchConnection;
         public static bool IsUpdating { get; set; } = false;
+		
         public Main()
         {
             InitializeComponent();
@@ -138,18 +139,23 @@ namespace SysBot.Pokemon.WinForms
                     case "Dark Mode":
                         ApplyDarkTheme();
                         break;
+						
                     case "Light Mode":
                         ApplyLightTheme();
                         break;
+						
                     case "Poke Mode":
                         ApplyPokemonTheme();
                         break;
+						
                     case "Gengar Mode":
                         ApplyGengarTheme();
                         break;
+						
                     case "Sylveon Mode":
                         ApplySylveonTheme();
                         break;
+						
                     default:
                         ApplyLightTheme();  // Default to Light Mode if no matching theme is found
                         break;
@@ -222,7 +228,8 @@ namespace SysBot.Pokemon.WinForms
 
         [JsonSerializable(typeof(ProgramConfig))]
         [JsonSourceGenerationOptions(WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-        public sealed partial class ProgramConfigContext : JsonSerializerContext { }
+        public sealed partial class ProgramConfigContext : JsonSerializerContext
+        { }
 
         private void B_Start_Click(object sender, EventArgs e)
         {
@@ -367,7 +374,6 @@ namespace SysBot.Pokemon.WinForms
 
         private void FLP_Bots_Paint(object sender, PaintEventArgs e)
         {
-
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -383,19 +389,24 @@ namespace SysBot.Pokemon.WinForms
                     case "Light Mode":
                         ApplyLightTheme();
                         break;
-                    case "Dark Mode":
+                    
+					case "Dark Mode":
                         ApplyDarkTheme();
                         break;
-                    case "Poke Mode":
+                    
+					case "Poke Mode":
                         ApplyPokemonTheme();
                         break;
-                    case "Gengar Mode":
+                    
+					case "Gengar Mode":
                         ApplyGengarTheme();
                         break;
-                    case "Sylveon Mode":
+                    
+					case "Sylveon Mode":
                         ApplySylveonTheme();
                         break;
-                    default:
+                    
+					default:
                         ApplyLightTheme();  // Default to Light Mode if no matching theme is found
                         break;
                 }

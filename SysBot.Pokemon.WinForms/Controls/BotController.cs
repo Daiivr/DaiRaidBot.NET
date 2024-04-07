@@ -185,6 +185,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         private void BotController_MouseEnter(object? sender, EventArgs e) => BackColor = Color.LightSkyBlue;
+
         private void BotController_MouseLeave(object? sender, EventArgs e) => BackColor = Color.Transparent;
 
         public void ReadState()
@@ -199,6 +200,21 @@ namespace SysBot.Pokemon.WinForms
             {
                 ReloadStatus(bot);
             }
+        }
+
+        private void L_Description_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void L_Left_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void PB_Lamp_Click(object sender, EventArgs e)
+        {
+
         }
     }
 

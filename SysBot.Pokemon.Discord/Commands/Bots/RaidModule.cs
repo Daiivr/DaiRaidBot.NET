@@ -23,7 +23,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
     public class RaidModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
         private readonly PokeRaidHub<T> Hub = SysCord<T>.Runner.Hub;
-        private DiscordSocketClient _client => SysCord<T>.Instance.GetClient();
+        private static DiscordSocketClient _client => SysCord<T>.Instance.GetClient();
 
         [Command("raidinfo")]
         [Alias("ri", "rv")]
@@ -32,7 +32,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             string seedValue,
             int level,
             int storyProgressLevel = 6,
-            string? eventType = null)
+            string? speciesName = null)
         {
             uint seed;
             try
@@ -55,29 +55,45 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
 
             var settings = Hub.Config.RotatingRaidSV;  // Get RotatingRaidSV settings
 
+            bool isEvent = !string.IsNullOrEmpty(speciesName);
+
+            var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
+            if (isEvent && selectedMap != TeraRaidMapParent.Paldea)
+            {
+                await ReplyAsync("Events can only be run in the Paldea map.");
+                return;
+            }
+
+            int raidDeliveryGroupID = -1;
+            if (!string.IsNullOrEmpty(speciesName) && SpeciesToGroupIDMap.TryGetValue(speciesName, out var groupIDAndIndices))
+            {
+                var firstRaidGroupID = groupIDAndIndices.First().GroupID;
+                raidDeliveryGroupID = firstRaidGroupID;
+            }
+            else if (!string.IsNullOrEmpty(speciesName))
+            {
+                await ReplyAsync("Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
+                return;
+            }
+
             var crystalType = level switch
             {
-                >= 1 and <= 5 => eventType == "Evento" ? (TeraCrystalType)2 : (TeraCrystalType)0,
+                >= 1 and <= 5 => isEvent ? (TeraCrystalType)2 : 0,
                 6 => (TeraCrystalType)1,
                 7 => (TeraCrystalType)3,
                 _ => throw new ArgumentException("✘ Nivel de dificultad no válido.")
             };
 
-            // Check if event type is specified but events are turned off
-            if (eventType == "Evento" && !settings.EventSettings.EventActive)
+            if (isEvent && !settings.EventSettings.EventActive)
             {
                 await ReplyAsync("⚠️ Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
                 return;
             }
 
-            var raidDeliveryGroupID = (level == 7) ? settings.EventSettings.MightyGroupID : settings.EventSettings.DistGroupID;  // Use MightyGroupID for 7 star, otherwise use DistGroupID
-            var isEvent = eventType == "Evento";
-
             try
             {
-                var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
                 var rewardsToShow = settings.EmbedToggles.RewardsToShow;
-                var (_, embed) = RaidInfoCommand(seedValue, (int)crystalType, selectedMap, storyProgressLevel, raidDeliveryGroupID, rewardsToShow, 0, isEvent);
+                var (_, embed) = RaidInfoCommand(seedValue, (int)crystalType, selectedMap, storyProgressLevel, raidDeliveryGroupID, rewardsToShow, settings.EmbedToggles.MoveTypeEmojis, settings.EmbedToggles.CustomTypeEmojis, 0, isEvent);
 
                 var instructionMessage = await ReplyAsync("Reacciona con ✅ para agregar el raid a la cola.");
                 var message = await ReplyAsync(embed: embed);
@@ -88,20 +104,15 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 {
                     if (reaction.UserId == Context.User.Id && reaction.Emote.Name == checkmarkEmoji.Name)
                     {
-                        await AddNewRaidParamNext(seedValue, level, storyProgressLevel, eventType);
+                        await AddNewRaidParamNext(seedValue, level, storyProgressLevel, speciesName);
 
                         SysCord<T>.ReactionService.RemoveReactionHandler(reaction.MessageId);
                     }
                 });
                 _ = Task.Run(async () =>
                 {
-                    // Delay for 1 minute
                     await Task.Delay(TimeSpan.FromMinutes(1));
-
-                    // Remove the reaction handler
                     SysCord<T>.ReactionService.RemoveReactionHandler(message.Id);
-
-                    // Delete the messages
                     await message.DeleteAsync();
                     await instructionMessage.DeleteAsync();
                 });
@@ -154,10 +165,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
 
             Hub.Config.RotatingRaidSV.RaiderBanList.AddIfNew(new[] { GetReference(nidToBan, ot, "") });
 
-            // Optionally, save the ban list to persist the changes
-            // SaveBanListMethod(Hub.Config.RaiderBanList);
-
-            // Notify the command issuer that the ban was successful.
             await ReplyAsync($"✔ El jugador con OT '{ot}' ha sido baneado.");
         }
 
@@ -215,12 +222,9 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
         [RequireSudo]
         public async Task AddBypassLimitAsync([Remainder] string mention)
         {
-            ulong idToAdd = 0;
-            string nameToAdd = "";
-            string type = "";
-
-            // Check if mention is a user
-            if (MentionUtils.TryParseUser(mention, out idToAdd))
+            string type;
+            string nameToAdd;
+            if (MentionUtils.TryParseUser(mention, out ulong idToAdd))
             {
                 var user = Context.Guild.GetUser(idToAdd);
                 nameToAdd = user?.Username ?? "Usuario desconocido";
@@ -239,9 +243,8 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 return;
             }
 
-            if (!Hub.Config.RotatingRaidSV.RaidSettings.BypassLimitRequests.ContainsKey(idToAdd))
+            if (Hub.Config.RotatingRaidSV.RaidSettings.BypassLimitRequests.TryAdd(idToAdd, nameToAdd))
             {
-                Hub.Config.RotatingRaidSV.RaidSettings.BypassLimitRequests.Add(idToAdd, nameToAdd);
 
                 await ReplyAsync($"✔ Se agregó {type} '{nameToAdd}' a la lista de omisiones.").ConfigureAwait(false);
             }
@@ -256,7 +259,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
         [RequireOwner]
         public async Task RePeek()
         {
-            string ip = GetBotIPFromJsonConfig(); // Fetch the IP from the config
+            string ip = RaidModule<T>.GetBotIPFromJsonConfig(); // Fetch the IP from the config
             var source = new CancellationTokenSource();
             var token = source.Token;
 
@@ -267,7 +270,8 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 return;
             }
 
-            byte[]? bytes = Array.Empty<byte>();
+            _ = Array.Empty<byte>();
+            byte[]? bytes;
             try
             {
                 bytes = await bot.Bot.Connection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
@@ -292,7 +296,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             await Context.Channel.SendFileAsync(ms, img, embed: embed.Build());
         }
 
-        private string GetBotIPFromJsonConfig()
+        private static string GetBotIPFromJsonConfig()
         {
             try
             {
@@ -320,45 +324,55 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             [Summary("Seed")] string seed,
             [Summary("Difficulty Level (1-7)")] int level,
             [Summary("Story Progress Level")] int storyProgressLevel = 6,
-            [Summary("Event (Optional)")] string? eventType = null)  // New optional parameter for specifying event type
+            [Summary("Species Name (Optional)")] string? speciesName = null)
         {
-            // Validate the seed for hexadecimal format
+
             if (seed.Length != 8 || !seed.All(c => "0123456789abcdefABCDEF".Contains(c)))
             {
                 await ReplyAsync("⚠️ Formato de semilla no válido. Ingrese una semilla que consta de exactamente 8 dígitos hexadecimales.").ConfigureAwait(false);
                 return;
             }
-            if (level < 1 || level > 7)  // Adjusted level range to 1-7
+            if (level < 1 || level > 7)
             {
                 await ReplyAsync("⚠️ Nivel de incursión no válido. Por favor introduzca un nivel entre 1 y 7.").ConfigureAwait(false);  // Adjusted message to reflect new level range
                 return;
             }
 
-            // Convert StoryProgressLevel to GameProgress enum value
             var gameProgress = ConvertToGameProgress(storyProgressLevel);
 
-            // Get the settings object from Hub
             var settings = Hub.Config.RotatingRaidSV;
+            bool isEvent = !string.IsNullOrEmpty(speciesName);
 
             var crystalType = level switch
             {
-                >= 1 and <= 5 => eventType == "Evento" ? (TeraCrystalType)2 : (TeraCrystalType)0,
+                >= 1 and <= 5 => isEvent ? (TeraCrystalType)2 : 0,
                 6 => (TeraCrystalType)1,
                 7 => (TeraCrystalType)3,
                 _ => throw new ArgumentException("✘ Nivel de dificultad no válido.")
             };
 
-            // Check if event type is specified but events are turned off
-            if (eventType == "Event" && !settings.EventSettings.EventActive)
+            int raidDeliveryGroupID = -1;
+
+            if (!string.IsNullOrEmpty(speciesName) && SpeciesToGroupIDMap.TryGetValue(speciesName, out var groupIDAndIndices))
+            {
+                var firstRaidGroupID = groupIDAndIndices.First().GroupID;
+                raidDeliveryGroupID = firstRaidGroupID;
+            }
+            else if (!string.IsNullOrEmpty(speciesName))
+            {
+                await ReplyAsync("Species name not recognized or not associated with an active event. Please check the name and try again.");
+                return;
+            }
+
+            if (isEvent && !settings.EventSettings.EventActive)
             {
                 await ReplyAsync("⚠️ Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
                 return;
             }
 
             var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
-            var raidDeliveryGroupID = settings.EventSettings.MightyGroupID;
             var rewardsToShow = settings.EmbedToggles.RewardsToShow;
-            var (pk, raidEmbed) = RaidInfoCommand(seed, (int)crystalType, selectedMap, storyProgressLevel, raidDeliveryGroupID, rewardsToShow);
+            var (pk, raidEmbed) = RaidInfoCommand(seed, (int)crystalType, selectedMap, storyProgressLevel, raidDeliveryGroupID, rewardsToShow, settings.EmbedToggles.MoveTypeEmojis, settings.EmbedToggles.CustomTypeEmojis);
             var description = string.Empty;
             var prevpath = "bodyparam.txt";
             var filepath = "RaidFilesSV\\bodyparam.txt";
@@ -414,17 +428,14 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             [Summary("Seed")] string seed,
             [Summary("Difficulty Level (1-7)")] int level,
             [Summary("Story Progress Level")] int storyProgressLevel = 6,
-            [Summary("Event (Optional)")] string? eventType = null)  // New argument for specifying an event
+            [Summary("Species Name (Optional)")] string? speciesName = null)
         {
             var botPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
-            // Check if raid requests are disabled by the host
             if (Hub.Config.RotatingRaidSV.RaidSettings.DisableRequests)
             {
                 await ReplyAsync("⚠️ Actualmente, el anfitrión tiene deshabilitadas las solicitudes de incursión.").ConfigureAwait(false);
                 return;
             }
-
-            // Ensure Compatible Difficulty and Story Progress level
             var compatible = CheckProgressandLevel(level, storyProgressLevel);
             if (!compatible)
             {
@@ -432,7 +443,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 return;
             }
 
-            // Check if the user already has a request
             var userId = Context.User.Id;
             if (Hub.Config.RotatingRaidSV.ActiveRaids.Any(r => r.RequestedByUserID == userId))
             {
@@ -449,7 +459,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 {
                     string responseMessage = $"✘ Ha alcanzado su límite de solicitudes. Espere {remainingCooldown.TotalMinutes:N0} minutos antes de realizar otra solicitud.";
 
-                    // Append the custom LimitRequestMsg if it's set
                     if (!string.IsNullOrWhiteSpace(Hub.Config.RotatingRaidSV.RaidSettings.LimitRequestMsg))
                     {
                         responseMessage += $"\n{Hub.Config.RotatingRaidSV.RaidSettings.LimitRequestMsg}";
@@ -460,7 +469,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 }
             }
 
-            // Validate the seed for hexadecimal format
             if (seed.Length != 8 || !seed.All(c => "0123456789abcdefABCDEF".Contains(c)))
             {
                 await ReplyAsync("⚠️ Formato de semilla no válido. Ingrese una semilla que consta de exactamente 8 dígitos hexadecimales.").ConfigureAwait(false);
@@ -473,45 +481,56 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 return;
             }
 
-            // Convert StoryProgressLevel to GameProgress enum value
             var gameProgress = ConvertToGameProgress(storyProgressLevel);
             if (gameProgress == GameProgress.None)
             {
                 await ReplyAsync("⚠️ Nivel de progreso de la historia no válido. Por favor introduzca un valor entre 1 y 6.").ConfigureAwait(false);
                 return;
             }
-
-            // Get the settings object from Hub
             var settings = Hub.Config.RotatingRaidSV;
+            bool isEvent = !string.IsNullOrEmpty(speciesName);
+
+            var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
+            if (isEvent && selectedMap != TeraRaidMapParent.Paldea)
+            {
+                await ReplyAsync("Events can only be run in the Paldea map.");
+                return;
+            }
 
             var crystalType = level switch
             {
-                >= 1 and <= 5 => eventType == "Evento" ? (TeraCrystalType)2 : (TeraCrystalType)0,
+                >= 1 and <= 5 => isEvent ? (TeraCrystalType)2 : 0,
                 6 => (TeraCrystalType)1,
                 7 => (TeraCrystalType)3,
                 _ => throw new ArgumentException("✘ Nivel de dificultad no válido.")
             };
 
-            // Determine the correct Group ID based on event type
-            var raidDeliveryGroupID = (level == 7) ? settings.EventSettings.MightyGroupID : settings.EventSettings.DistGroupID;
+            int raidDeliveryGroupID = -1;
 
-            // Check if event type is specified but events are turned off
-            if (eventType == "Evento" && !settings.EventSettings.EventActive)
+            if (!string.IsNullOrEmpty(speciesName) && SpeciesToGroupIDMap.TryGetValue(speciesName, out var groupIDAndIndices))
             {
-                await ReplyAsync("⚠️ Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
+                var firstRaidGroupID = groupIDAndIndices.First().GroupID;
+                raidDeliveryGroupID = firstRaidGroupID;
+            }
+            else if (!string.IsNullOrEmpty(speciesName))
+            {
+                await ReplyAsync("Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
                 return;
             }
 
-            // If EventActive is true, force storyProgressLevel to 6
+            if (isEvent && !settings.EventSettings.EventActive)
+            {
+                await ReplyAsync("Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
+                return;
+            }
             if (settings.EventSettings.EventActive && storyProgressLevel != 6)
             {
                 await ReplyAsync("⚠️ Actualmente, solo se permite el nivel 6 de progreso de la historia (6* desbloqueado) debido a la configuración del evento activo.").ConfigureAwait(false);
                 return;
             }
             int effectiveQueuePosition = 1;
-            var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
             var rewardsToShow = settings.EmbedToggles.RewardsToShow;
-            var (pk, raidEmbed) = RaidInfoCommand(seed, (int)crystalType, selectedMap, storyProgressLevel, raidDeliveryGroupID, rewardsToShow, effectiveQueuePosition);
+            var (pk, raidEmbed) = RaidInfoCommand(seed, (int)crystalType, selectedMap, storyProgressLevel, raidDeliveryGroupID, rewardsToShow, settings.EmbedToggles.MoveTypeEmojis, settings.EmbedToggles.CustomTypeEmojis, effectiveQueuePosition);
             var description = string.Empty;
             var prevpath = "bodyparam.txt";
             var filepath = "RaidFilesSV\\bodyparam.txt";
@@ -542,10 +561,11 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 Seed = seed,
                 IsCoded = true,
                 IsShiny = pk.IsShiny,
+                GroupID = raidDeliveryGroupID,
                 AddedByRACommand = true,
-                RequestCommand = $"{botPrefix}ra {seed} {level} {storyProgressLevel}{(eventType != null ? $" {eventType}" : "")}",
+                RequestCommand = $"{botPrefix}ra {seed} {level} {storyProgressLevel}{(isEvent ? $" {speciesName}" : "")}",
                 RequestedByUserID = Context.User.Id,
-                Title = $"Incursión solicitada por {Context.User.Username} {(eventType == "Event" ? " (Event Raid)" : "")}",
+                Title = $"Incursión solicitada por {Context.User.Username} {(isEvent ? $" ({speciesName} Event Raid)" : "")}",
                 RaidUpNext = false,
                 User = Context.User,
             };
@@ -628,12 +648,16 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 case 6: // Unlocked 6 Stars
                     return level >= 3 && level <= 7;
+
                 case 5: // Unlocked 5 Stars
                     return level >= 3 && level <= 5;
+
                 case 4: // Unlocked 4 Stars
                     return level >= 1 && level <= 4;
+
                 case 3: // Unlocked 3 Stars
                     return level >= 1 && level <= 3;
+
                 default: return false; // No 1 or 2 Star Unlocked
             }
         }

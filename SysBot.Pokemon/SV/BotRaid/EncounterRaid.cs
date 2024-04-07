@@ -27,13 +27,13 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
     public string Name => ((dynamic)Encounter).Name;
     public string LongName => ((dynamic)Encounter).LongName;
     public EntityContext Context => ((dynamic)Encounter).Context;
-    public bool EggEncounter => ((dynamic)Encounter).EggEncounter;
-    public int Generation => ((dynamic)Encounter).Generation;
+    public bool IsEgg => ((dynamic)Encounter).IsEgg;
+    public byte Generation => ((dynamic)Encounter).Generation;
     public bool IsShiny => ((dynamic)Encounter).IsShiny;
     public byte LevelMin => ((dynamic)Encounter).LevelMin;
     public byte LevelMax => ((dynamic)Encounter).LevelMax;
-    public int Location => ((dynamic)Encounter).Location;
-    public int EggLocation => ((dynamic)Encounter).EggLocation;
+    public ushort Location => ((dynamic)Encounter).Location;
+    public ushort EggLocation => ((dynamic)Encounter).EggLocation;
     public Ball FixedBall => ((dynamic)Encounter).FixedBall;
 
     public uint Identifier => GetIdentifier();
@@ -60,13 +60,16 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
     }
 
     PKM IEncounterConvertible.ConvertToPKM(ITrainerInfo tr, EncounterCriteria criteria) => ConvertToPKM(tr, criteria);
+    
     PKM IEncounterConvertible.ConvertToPKM(ITrainerInfo tr) => ConvertToPKM(tr);
+   
     public PK9 ConvertToPKM(ITrainerInfo tr) => ConvertToPKM(tr, EncounterCriteria.Unrestricted);
+    
     public PK9 ConvertToPKM(ITrainerInfo tr, EncounterCriteria criteria) => ((dynamic)Encounter).ConvertToPKM(tr, criteria);
 
     public ushort GetRandRateTotalScarlet(int stage)
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return 0;
 
         return ((dynamic)Encounter).GetRandRateTotalScarlet(stage);
@@ -74,7 +77,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     public ushort GetRandRateTotalViolet(int stage)
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return 0;
 
         return ((dynamic)Encounter).GetRandRateTotalViolet(stage);
@@ -82,7 +85,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     public ushort GetRandRateMinScarlet(int stage = 0)
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return (ushort)((dynamic)Encounter).RandRateMinScarlet;
 
         return ((dynamic)Encounter).GetRandRateMinScarlet(stage);
@@ -90,7 +93,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     public ushort GetRandRateMinViolet(int stage = 0)
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return (ushort)((dynamic)Encounter).RandRateMinViolet;
 
         return ((dynamic)Encounter).GetRandRateMinViolet(stage);
@@ -98,7 +101,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private Nature GetNature()
     {
-        if (Encounter is EncounterMight9 or PKHeX.Core.EncounterMight9)
+        if (Encounter is EncounterMight9 or EncounterMight9)
             return ((dynamic)Encounter).Nature;
 
         return Nature.Random;
@@ -106,7 +109,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private SizeType9 GetScaleType()
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return 0;
 
         return ((dynamic)Encounter).ScaleType;
@@ -114,7 +117,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private byte GetScale()
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return 0;
 
         return ((dynamic)Encounter).Scale;
@@ -122,7 +125,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private IndividualValueSet GetIVs()
     {
-        if (Encounter is EncounterTera9 or PKHeX.Core.EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return default;
 
         return ((dynamic)Encounter).IVs;
@@ -130,7 +133,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private uint GetIdentifier()
     {
-        if (Encounter is PKHeX.Core.EncounterTera9 or PKHeX.Core.EncounterDist9 or PKHeX.Core.EncounterMight9)
+        if (Encounter is EncounterTera9 or EncounterDist9 or EncounterMight9)
             return 0;
 
         return ((dynamic)Encounter).Identifier;
@@ -138,7 +141,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private ulong GetFixedRewardHash()
     {
-        if (Encounter is PKHeX.Core.EncounterTera9 or PKHeX.Core.EncounterDist9 or PKHeX.Core.EncounterMight9)
+        if (Encounter is EncounterTera9 or EncounterDist9 or EncounterMight9)
             return 0;
 
         return ((dynamic)Encounter).FixedRewardHash;
@@ -146,7 +149,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private ulong GetLotteryRewardHash()
     {
-        if (Encounter is PKHeX.Core.EncounterTera9 or PKHeX.Core.EncounterDist9 or PKHeX.Core.EncounterMight9)
+        if (Encounter is EncounterTera9 or EncounterDist9 or EncounterMight9)
             return 0;
 
         return ((dynamic)Encounter).LotteryRewardHash;
@@ -154,7 +157,7 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private int GetItem()
     {
-        if (Encounter is PKHeX.Core.EncounterTera9 or PKHeX.Core.EncounterDist9 or PKHeX.Core.EncounterMight9)
+        if (Encounter is EncounterTera9 or EncounterDist9 or EncounterMight9)
             return 0;
 
         return ((dynamic)Encounter).Item;
@@ -162,10 +165,10 @@ public class EncounterRaid9 : IEncounterable, IEncounterConvertible<PK9>, ITeraR
 
     private bool GetCanBeEncountered(GameVersion version)
     {
-        if (Encounter is PKHeX.Core.EncounterTera9 or EncounterTera9)
+        if (Encounter is EncounterTera9 or EncounterTera9)
             return version switch { GameVersion.SL => ((dynamic)Encounter).IsAvailableHostScarlet, _ => ((dynamic)Encounter).IsAvailableHostViolet, };
 
-        if (Encounter is PKHeX.Core.EncounterDist9 or PKHeX.Core.EncounterMight9 or EncounterDist9 or EncounterMight9)
+        if (Encounter is EncounterDist9 or EncounterMight9 or EncounterDist9 or EncounterMight9)
         {
             for (var progress = 0; progress <= 3; progress++)
             {

@@ -34,6 +34,7 @@ namespace SysBot.Pokemon
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
 
         public MiscSettingsCategory MiscSettings { get; set; } = new MiscSettingsCategory();
+
         [Browsable(false)]
         public bool ScreenOff
         {
@@ -44,12 +45,15 @@ namespace SysBot.Pokemon
         public class RotatingRaidParameters
         {
             public override string ToString() => $"{Title}";
+
             public bool ActiveInRotation { get; set; } = true;
             public int DifficultyLevel { get; set; } = 0;
             public int StoryProgressLevel { get; set; } = 5;
             public TeraCrystalType CrystalType { get; set; } = TeraCrystalType.Base;
+
             [Browsable(false)]
             public string[] Description { get; set; } = Array.Empty<string>();
+
             public bool IsCoded { get; set; } = true;
             public bool IsShiny { get; set; } = true;
             public bool ForceSpecificSpecies { get; set; } = false;
@@ -59,16 +63,21 @@ namespace SysBot.Pokemon
             public bool SpriteAlternateArt { get; set; } = false;
             public string Seed { get; set; } = "0";
             public Action1Type Action1 { get; set; } = Action1Type.GoAllOut;
-            public int Action1Delay { get; set; } = 5; // Default delay of 5 seconds
+            public int Action1Delay { get; set; } = 5;
+            public int GroupID { get; set; } = 0;
             public string Title { get; set; } = string.Empty;
+
             [Browsable(false)]
             public bool AddedByRACommand { get; set; } = false;
+
             [Browsable(false)]
             public bool RaidUpNext { get; set; } = false;
+
             [Browsable(false)]
             public string RequestCommand { get; set; } = string.Empty;
             [Browsable(false)]
-            public ulong RequestedByUserID { get; set; } // Add this line for User ID
+            public ulong RequestedByUserID { get; set; }
+
             [Browsable(false)]
             [System.Text.Json.Serialization.JsonIgnore]
             public SocketUser? User { get; set; }
@@ -78,17 +87,9 @@ namespace SysBot.Pokemon
         public class EventSettingsCategory
         {
             public override string ToString() => "Event Settings";
-            [Category(Hosting), Description("Set to \"false\" to stop Event settings from changing automatically if Event is found in Overworld.")]
-            public bool AutoDetectEvents { get; set; } = false;
 
             [Category(Hosting), Description("Set to \"true\" when events are active to properly process level 7 (event) and level 5 (distribution) raids.")]
             public bool EventActive { get; set; } = false;
-
-            [Category(Hosting), Description("Mighty Event Group ID.  -1 means No 7 Star Event.")]
-            public int MightyGroupID { get; set; } = -1;
-
-            [Category(Hosting), Description("Distribution Event Group ID.  -1 means No Distribution Event.")]
-            public int DistGroupID { get; set; } = -1;
         }
 
         [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidSettingsCategory>))]
@@ -142,10 +143,77 @@ namespace SysBot.Pokemon
             public bool EnableTimeRollBack { get; set; } = true;
         }
 
+        public class MoveTypeEmojiInfo
+        {
+            [Description("The type of move.")]
+            public MoveType MoveType { get; set; }
+
+            [Description("The Discord emoji string for this move type.")]
+            public string EmojiCode { get; set; }
+
+            public MoveTypeEmojiInfo() { }
+
+            public MoveTypeEmojiInfo(MoveType moveType)
+            {
+                MoveType = moveType;
+            }
+            public override string ToString()
+            {
+                if (string.IsNullOrEmpty(EmojiCode))
+                    return MoveType.ToString();
+
+                return $"{EmojiCode}";
+            }
+        }
+
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public class EmojiInfo
+        {
+            [Description("The full string for the emoji.")]
+            public string EmojiString { get; set; } = string.Empty;
+
+            public override string ToString()
+            {
+                return string.IsNullOrEmpty(EmojiString) ? "Not Set" : EmojiString;
+            }
+        }
+
         [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidPresetFiltersCategory>))]
         public class RotatingRaidPresetFiltersCategory
         {
             public override string ToString() => "Embed Toggles";
+
+            [Category(Hosting), Description("Will show Move Type Icons next to moves in trade embed (Discord only).  Requires user to upload the emojis to their server.")]
+            public bool MoveTypeEmojis { get; set; } = true;
+
+            [Category(Hosting), Description("Custom Emoji information for the move types.")]
+            public List<MoveTypeEmojiInfo> CustomTypeEmojis { get; set; } =
+            [
+            new(MoveType.Bug),
+                new(MoveType.Fire),
+                new(MoveType.Flying),
+                new(MoveType.Ground),
+                new(MoveType.Water),
+                new(MoveType.Grass),
+                new(MoveType.Ice),
+                new(MoveType.Rock),
+                new(MoveType.Ghost),
+                new(MoveType.Steel),
+                new(MoveType.Fighting),
+                new(MoveType.Electric),
+                new(MoveType.Dragon),
+                new(MoveType.Psychic),
+                new(MoveType.Dark),
+                new(MoveType.Normal),
+                new(MoveType.Poison),
+                new(MoveType.Fairy),
+            ];
+
+            [Category(Hosting), Description("The full string for the male gender emoji.")]
+            public EmojiInfo MaleEmoji { get; set; } = new EmojiInfo();
+
+            [Category(Hosting), Description("The full string for the female gender emoji.")]
+            public EmojiInfo FemaleEmoji { get; set; } = new EmojiInfo();
 
             [Category(Hosting), Description("Raid embed description.")]
             public string[] RaidEmbedDescription { get; set; } = Array.Empty<string>();
@@ -170,30 +238,30 @@ namespace SysBot.Pokemon
 
             [Category(Hosting), Description("Select which rewards to display in the embed.")]
             public List<string> RewardsToShow { get; set; } = new List<string>
-{
-    "Rare Candy",
-    "Ability Capsule",
-    "Bottle Cap",
-    "Ability Patch",
-    "Exp. Candy L",
-    "Exp. Candy XL",
-    "Sweet Herba Mystica",
-    "Salty Herba Mystica",
-    "Sour Herba Mystica",
-    "Bitter Herba Mystica",
-    "Spicy Herba Mystica",
-    "Pokeball",
-    "Shards",
-    "Nugget",
-    "Tiny Mushroom",
-    "Big Mushroom",
-    "Pearl",
-    "Big Pearl",
-    "Stardust",
-    "Star Piece",
-    "Gold Bottle Cap",
-    "PP Up"
-};
+            {
+                "Rare Candy",
+                "Ability Capsule",
+                "Bottle Cap",
+                "Ability Patch",
+                "Exp. Candy L",
+                "Exp. Candy XL",
+                "Sweet Herba Mystica",
+                "Salty Herba Mystica",
+                "Sour Herba Mystica",
+                "Bitter Herba Mystica",
+                "Spicy Herba Mystica",
+                "Pokeball",
+                "Shards",
+                "Nugget",
+                "Tiny Mushroom",
+                "Big Mushroom",
+                "Pearl",
+                "Big Pearl",
+                "Stardust",
+                "Star Piece",
+                "Gold Bottle Cap",
+                "PP Up"
+            };
 
             [Category(Hosting), Description("Amount of time (in seconds) to post a requested raid embed.")]
             public int RequestEmbedTime { get; set; } = 30;
@@ -206,6 +274,9 @@ namespace SysBot.Pokemon
 
             [Category(FeatureToggle), Description("When enabled, the bot will hide the raid code from the Discord embed.")]
             public bool HideRaidCode { get; set; } = false;
+
+            [Category("Customization"), Description("Custom message to display for the raid rotation warning.")]
+            public string CustomRaidRotationMessage { get; set; } = "";
         }
 
         [Category("MysteryRaids"), TypeConverter(typeof(ExpandableObjectConverter))]
@@ -213,10 +284,13 @@ namespace SysBot.Pokemon
         {
             [TypeConverter(typeof(ExpandableObjectConverter))]
             public Unlocked3StarSettings Unlocked3StarSettings { get; set; } = new Unlocked3StarSettings();
+
             [TypeConverter(typeof(ExpandableObjectConverter))]
             public Unlocked4StarSettings Unlocked4StarSettings { get; set; } = new Unlocked4StarSettings();
+
             [TypeConverter(typeof(ExpandableObjectConverter))]
             public Unlocked5StarSettings Unlocked5StarSettings { get; set; } = new Unlocked5StarSettings();
+
             [TypeConverter(typeof(ExpandableObjectConverter))]
             public Unlocked6StarSettings Unlocked6StarSettings { get; set; } = new Unlocked6StarSettings();
 
@@ -226,6 +300,7 @@ namespace SysBot.Pokemon
         public class Unlocked3StarSettings
         {
             public bool Enabled { get; set; } = true;
+
             [Category("DifficultyLevels"), Description("Allow 1* Raids in 3* Unlocked Raids.")]
             public bool Allow1StarRaids { get; set; } = true;
 
@@ -260,6 +335,7 @@ namespace SysBot.Pokemon
         public class Unlocked5StarSettings
         {
             public bool Enabled { get; set; } = true;
+            
             [Category("DifficultyLevels"), Description("Allow 3* Raids in 5* Unlocked Raids.")]
             public bool Allow3StarRaids { get; set; } = true;
 
