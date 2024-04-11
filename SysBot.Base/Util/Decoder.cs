@@ -8,9 +8,9 @@ namespace SysBot.Base
     public static class Decoder
     {
         private static bool IsNum(char c) => (uint)(c - '0') <= 9;
-        
+
         private static bool IsHexUpper(char c) => (uint)(c - 'A') <= 5;
-        
+
         private static bool IsHexLower(char c) => (uint)(c - 'a') <= 5;
 
         public static byte[] ConvertHexByteStringToBytes(byte[] bytes)

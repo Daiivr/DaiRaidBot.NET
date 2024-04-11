@@ -14,14 +14,20 @@ namespace SysBot.Pokemon.Discord
     // Copyright 2017, Christopher F. <foxbot@protonmail.com>
     public class InfoModule : ModuleBase<SocketCommandContext>
     {
-        private const string detail = "I am a custom Raid Bot made by Gengar and Kai that accepts raid requests, and much more.";
-        public const string version = NotRaidBot.Version;
-        private const string support = NotRaidBot.Attribution;
+        private const string detail = "Soy un Raid Bot de código abierto impulsado por PKHe X.Core y otro software de código abierto.";
+        public const string version = DaiRaidBot.Version;
+        private const string support = DaiRaidBot.Repo;
+        private const ulong DisallowedUserId = 195756980873199618;
 
         [Command("info")]
         [Alias("about", "whoami", "owner")]
         public async Task InfoAsync()
         {
+            if (Context.User.Id == DisallowedUserId)
+            {
+                await ReplyAsync("No permitimos que personas turbias usen este comando.").ConfigureAwait(false);
+                return;
+            }
             var app = await Context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
             var programIconUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/icon4.png";
             var builder = new EmbedBuilder
@@ -31,23 +37,22 @@ namespace SysBot.Pokemon.Discord
                 ImageUrl = programIconUrl
             };
 
-            builder.AddField("# __Bot Info__",
-                $"- **Version**: {version}\n" +
-                $"- [Download NotRaidBot]({support})\n" +
-                $"- {Format.Bold("Owner")}: {app.Owner} ({app.Owner.Id})\n" +
-                $"- {Format.Bold("Uptime")}: {GetUptime()}\n" +
-                $"- {Format.Bold("Core Version")}: {GetVersionInfo("PKHeX.Core")}\n" +
-                $"- {Format.Bold("AutoLegality Version")}: {GetVersionInfo("PKHeX.Core.AutoMod")}\n"
+            builder.AddField("# __Información del Bot__",
+                $"- **Versión**: {version}\n" +
+                $"- [Descarga DaiRaidBot]({support})" +
+                $"- {Format.Bold("Propietario")}: {app.Owner} ({app.Owner.Id})\n" +
+                $"- {Format.Bold("Tiempo de actividad")}: {GetUptime()}\n" +
+                $"- {Format.Bold("Versión de PKHeX")}: {GetVersionInfo("PKHeX.Core")}\n" +
+                $"- {Format.Bold("Versión de AutoLegality")}: {GetVersionInfo("PKHeX.Core.AutoMod")}\n"
                 );
 
-            builder.AddField("Stats",
-                $"- {Format.Bold("Guilds")}: {Context.Client.Guilds.Count}\n" +
-                $"- {Format.Bold("Channels")}: {Context.Client.Guilds.Sum(g => g.Channels.Count)}\n" +
-                $"- {Format.Bold("Users")}: {Context.Client.Guilds.Sum(g => g.MemberCount)}\n" +
-                $"{Format.Bold($"\nVisit [NotPaldea.net]({support}) for more information.")}\n"
+            builder.AddField("Estadísticas",
+                $"- {Format.Bold("Servers")}: {Context.Client.Guilds.Count}\n" +
+                $"- {Format.Bold("Canales")}: {Context.Client.Guilds.Sum(g => g.Channels.Count)}\n" +
+                $"- {Format.Bold("Usuarios")}: {Context.Client.Guilds.Sum(g => g.MemberCount)}\n"
                 );
-
-            await ReplyAsync("Here's a bit about me!", embed: builder.Build()).ConfigureAwait(false);
+            builder.WithThumbnailUrl("https://i.imgur.com/jfG4V11.png");
+            await ReplyAsync("He aquí un poco de informacion sobre mí!", embed: builder.Build()).ConfigureAwait(false);
         }
 
         private static string GetUptime() => (DateTime.Now - Process.GetCurrentProcess().StartTime).ToString(@"dd\.hh\:mm\:ss");

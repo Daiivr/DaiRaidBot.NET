@@ -35,7 +35,7 @@ public static class RPEmbed
 
         embed.WithAuthor(auth =>
         {
-            auth.Name = "<a:yes:1206485105674166292> Pokémon actualizado!";
+            auth.Name = "✅ Pokémon actualizado!";
         });
 
         return embed.Build();

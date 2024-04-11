@@ -42,7 +42,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             catch (FormatException)
             {
-                await ReplyAsync("⚠️ Formato de semilla no válido. Por favor ingrese una semilla válida.");
+                await ReplyAsync("<a:warning:1206483664939126795> Formato de semilla no válido. Por favor ingrese una semilla válida.");
                 return;
             }
 
@@ -50,7 +50,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var compatible = CheckProgressandLevel(level, storyProgressLevel);
             if (!compatible)
             {
-                await ReplyAsync($"✘ La dificultad de la incursión requiere un {GetRequiredProgress(level)}.").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> La dificultad de la incursión requiere un {GetRequiredProgress(level)}.").ConfigureAwait(false);
                 return;
             }
 
@@ -59,9 +59,10 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             bool isEvent = !string.IsNullOrEmpty(speciesName);
 
             var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
+
             if (isEvent && selectedMap != TeraRaidMapParent.Paldea)
             {
-                await ReplyAsync("Events can only be run in the Paldea map.");
+                await ReplyAsync("<a:warning:1206483664939126795> Los eventos sólo se pueden ejecutar en el mapa de Paldea.");
                 return;
             }
 
@@ -73,7 +74,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             else if (!string.IsNullOrEmpty(speciesName))
             {
-                await ReplyAsync("Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
+                await ReplyAsync("<a:warning:1206483664939126795> Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
                 return;
             }
 
@@ -82,12 +83,12 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 >= 1 and <= 5 => isEvent ? (TeraCrystalType)2 : 0,
                 6 => (TeraCrystalType)1,
                 7 => (TeraCrystalType)3,
-                _ => throw new ArgumentException("✘ Nivel de dificultad no válido.")
+                _ => throw new ArgumentException("<a:warning:1206483664939126795> Nivel de dificultad no válido.")
             };
 
             if (isEvent && !settings.EventSettings.EventActive)
             {
-                await ReplyAsync("⚠️ Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
+                await ReplyAsync("<a:no:1206485104424128593> Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
                 return;
             }
 
@@ -142,14 +143,14 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             // Check if there are duplicates.
             if (matchedPlayers.Count > 1)
             {
-                await ReplyAsync($"⚠️ Se encontraron varios jugadores con OT '{ot}'. La prohibición se saltó. Por favor revise manualmente.");
+                await ReplyAsync($"<a:warning:1206483664939126795> Se encontraron varios jugadores con OT '{ot}'. La prohibición se saltó. Por favor revise manualmente.");
                 return;
             }
 
             // If no player is found, notify and return.
             if (matchedPlayers.Count == 0)
             {
-                await ReplyAsync($"✘ No se encontró ningún jugador con OT '{ot}'.");
+                await ReplyAsync($"<a:warning:1206483664939126795> No se encontró ningún jugador con el OT '{ot}'..");
                 return;
             }
 
@@ -160,13 +161,13 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             // Check if the NID is already in the ban list.
             if (Hub.Config.RotatingRaidSV.RaiderBanList.List.Any(x => x.ID == nidToBan))
             {
-                await ReplyAsync($"⚠️ El jugador con OT '{ot}' ya está baneado.");
+                await ReplyAsync($"<a:no:1206485104424128593> El jugador con OT '{ot}' ya está baneado.");
                 return;
             }
 
             Hub.Config.RotatingRaidSV.RaiderBanList.AddIfNew(new[] { GetReference(nidToBan, ot, "") });
 
-            await ReplyAsync($"✔ El jugador con OT '{ot}' ha sido baneado.");
+            await ReplyAsync($"<a:yes:1206485105674166292> El jugador con OT '{ot}' ha sido baneado.");
         }
 
         [Command("banNID")]
@@ -190,7 +191,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
 
             Hub.Config.RotatingRaidSV.RaiderBanList.AddIfNew(new[] { GetReference(nid, ot, comment) });
-            await ReplyAsync("Done.").ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
         }
 
         [Command("limitrequests")]
@@ -202,7 +203,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var settings = Hub.Config.RotatingRaidSV.RaidSettings;
             settings.LimitRequests = newLimit;
 
-            await ReplyAsync($"✔ Limite de solicitudes actualizado a {newLimit}.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> Limite de solicitudes actualizado a {newLimit}.").ConfigureAwait(false);
         }
 
         [Command("limitrequeststime")]
@@ -214,7 +215,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var settings = Hub.Config.RotatingRaidSV.RaidSettings;
             settings.LimitRequestsTime = newTime;
 
-            await ReplyAsync($"✔ Limite de tiempo de las solicitudes actualizado a {newTime} minutos.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> Limite de tiempo de las solicitudes actualizado a {newTime} minutos.").ConfigureAwait(false);
         }
 
         [Command("addlimitbypass")]
@@ -229,7 +230,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 var user = Context.Guild.GetUser(idToAdd);
                 nameToAdd = user?.Username ?? "Usuario desconocido";
-                type = "Usuario";
+                type = "User";
             }
             // Check if mention is a role
             else if (MentionUtils.TryParseRole(mention, out idToAdd))
@@ -240,18 +241,18 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             else
             {
-                await ReplyAsync("⚠️ Usuario o rol no válido.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Usuario o rol no válido.").ConfigureAwait(false);
                 return;
             }
 
             if (Hub.Config.RotatingRaidSV.RaidSettings.BypassLimitRequests.TryAdd(idToAdd, nameToAdd))
             {
 
-                await ReplyAsync($"✔ Se agregó {type} '{nameToAdd}' a la lista de omisiones.").ConfigureAwait(false);
+                await ReplyAsync($"<a:yes:1206485105674166292> Se agregó {type} '{nameToAdd}' a la lista de omisiones.").ConfigureAwait(false);
             }
             else
             {
-                await ReplyAsync($"⚠️ {type} '{nameToAdd}' ya está en la lista de omisión.").ConfigureAwait(false);
+                await ReplyAsync($"<a:no:1206485104424128593> {type} '{nameToAdd}' ya está en la lista de omisión.").ConfigureAwait(false);
             }
         }
 
@@ -267,7 +268,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"⚠️ No se encontró ningún bot con la dirección IP: ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> No se encontró ningún bot con la dirección IP: ({ip}).").ConfigureAwait(false);
                 return;
             }
 
@@ -279,20 +280,20 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             catch (Exception ex)
             {
-                await ReplyAsync($"⚠️ Error al recuperar píxeles: {ex.Message}");
+                await ReplyAsync($"<a:warning:1206483664939126795> Error al recuperar píxeles: {ex.Message}");
                 return;
             }
 
             if (bytes.Length == 0)
             {
-                await ReplyAsync("⚠️ No se recibieron datos de captura de pantalla.");
+                await ReplyAsync("<a:warning:1206483664939126795> No se recibieron datos de captura de pantalla.");
                 return;
             }
 
             using MemoryStream ms = new(bytes);
             var img = "cap.jpg";
             var embed = new EmbedBuilder { ImageUrl = $"attachment://{img}", Color = Color.Purple }
-                .WithFooter(new EmbedFooterBuilder { Text = $"✔ Aquí está tu captura de pantalla." });
+                .WithFooter(new EmbedFooterBuilder { Text = $"Aquí está tu captura de pantalla." });
 
             await Context.Channel.SendFileAsync(ms, img, embed: embed.Build());
         }
@@ -302,7 +303,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             try
             {
                 // Read the file and parse the JSON
-                var jsonData = File.ReadAllText(NotRaidBot.ConfigPath);
+                var jsonData = File.ReadAllText(DaiRaidBot.ConfigPath);
                 var config = JObject.Parse(jsonData);
 
                 // Access the IP address from the first bot in the Bots array
@@ -312,7 +313,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             catch (Exception ex)
             {
                 // Handle any errors that occur during reading or parsing the file
-                Console.WriteLine($"⚠️ Error al leer el archivo de configuración: {ex.Message}");
+                Console.WriteLine($"<a:warning:1206483664939126795> Error al leer el archivo de configuración: {ex.Message}");
                 return "192.168.1.1"; // Default IP if error occurs
             }
         }
@@ -327,15 +328,14 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             [Summary("Story Progress Level")] int storyProgressLevel = 6,
             [Summary("Species Name (Optional)")] string? speciesName = null)
         {
-
             if (seed.Length != 8 || !seed.All(c => "0123456789abcdefABCDEF".Contains(c)))
             {
-                await ReplyAsync("⚠️ Formato de semilla no válido. Ingrese una semilla que consta de exactamente 8 dígitos hexadecimales.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Formato de semilla no válido. Ingrese una semilla que consta de exactamente 8 dígitos hexadecimales.").ConfigureAwait(false);
                 return;
             }
             if (level < 1 || level > 7)
             {
-                await ReplyAsync("⚠️ Nivel de incursión no válido. Por favor introduzca un nivel entre 1 y 7.").ConfigureAwait(false);  // Adjusted message to reflect new level range
+                await ReplyAsync("<a:warning:1206483664939126795> Nivel de incursión no válido. Por favor introduzca un nivel entre 1 y 7.").ConfigureAwait(false);  // Adjusted message to reflect new level range
                 return;
             }
 
@@ -349,7 +349,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 >= 1 and <= 5 => isEvent ? (TeraCrystalType)2 : 0,
                 6 => (TeraCrystalType)1,
                 7 => (TeraCrystalType)3,
-                _ => throw new ArgumentException("✘ Nivel de dificultad no válido.")
+                _ => throw new ArgumentException("<a:warning:1206483664939126795> Nivel de dificultad no válido.")
             };
 
             int raidDeliveryGroupID = -1;
@@ -361,13 +361,13 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             else if (!string.IsNullOrEmpty(speciesName))
             {
-                await ReplyAsync("Species name not recognized or not associated with an active event. Please check the name and try again.");
+                await ReplyAsync("<a:warning:1206483664939126795> Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
                 return;
             }
 
             if (isEvent && !settings.EventSettings.EventActive)
             {
-                await ReplyAsync("⚠️ Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
                 return;
             }
 
@@ -418,7 +418,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             Hub.Config.RotatingRaidSV.ActiveRaids.Add(newparam);
             await Context.Message.DeleteAsync().ConfigureAwait(false);
-            var msg = $"✔ Tu nueva incursión ha sido agregada.";
+            var msg = $"<a:yes:1206485105674166292> Tu nueva incursión ha sido agregada.";
             await ReplyAsync(msg, embed: raidEmbed).ConfigureAwait(false);
         }
 
@@ -436,13 +436,13 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var botPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
             if (Hub.Config.RotatingRaidSV.RaidSettings.DisableRequests)
             {
-                await ReplyAsync("⚠️ Actualmente, el anfitrión tiene deshabilitadas las solicitudes de incursión.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Actualmente, el anfitrión tiene deshabilitadas las solicitudes de incursión.").ConfigureAwait(false);
                 return;
             }
             var compatible = CheckProgressandLevel(level, storyProgressLevel);
             if (!compatible)
             {
-                await ReplyAsync($"✘ La dificultad de la incursión requiere un {GetRequiredProgress(level)}.").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> La dificultad de la incursión requiere un {GetRequiredProgress(level)}.").ConfigureAwait(false);
                 return;
             }
 
@@ -465,20 +465,20 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             // Check if private raids are enabled
             if (!Hub.Config.RotatingRaidSV.RaidSettings.PrivateRaidsEnabled && (user1 != null || user2 != null || user3 != null))
             {
-                await ReplyAsync("⚠️ Actualmente, el anfitrión deshabilita las incursiones privadas.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Actualmente, el anfitrión tiene deshabilitadas las incursiones privadas.").ConfigureAwait(false);
                 return;
             }
             // Check if the number of user mentions exceeds the limit
             int mentionCount = (user1 != null ? 1 : 0) + (user2 != null ? 1 : 0) + (user3 != null ? 1 : 0);
             if (mentionCount > 3)
             {
-                await ReplyAsync("⚠️ Solo puedes mencionar hasta 3 usuarios para una incursión privada.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Solo puedes mencionar hasta 3 usuarios para una incursión privada.").ConfigureAwait(false);
                 return;
             }
             var userId = Context.User.Id;
             if (Hub.Config.RotatingRaidSV.ActiveRaids.Any(r => r.RequestedByUserID == userId))
             {
-                await ReplyAsync("✘ Ya tienes una solicitud de incursión existente en la cola.").ConfigureAwait(false);
+                await ReplyAsync("<a:no:1206485104424128593> Ya tienes una solicitud de incursión existente en la cola.").ConfigureAwait(false);
                 return;
             }
             var userRequestManager = new UserRequestManager();
@@ -489,7 +489,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 if (!userRequestManager.CanRequest(userId, Hub.Config.RotatingRaidSV.RaidSettings.LimitRequests, Hub.Config.RotatingRaidSV.RaidSettings.LimitRequestsTime, out var remainingCooldown))
                 {
-                    string responseMessage = $"✘ Ha alcanzado su límite de solicitudes. Espere {remainingCooldown.TotalMinutes:N0} minutos antes de realizar otra solicitud.";
+                    string responseMessage = $"<a:no:1206485104424128593> Ha alcanzado su límite de solicitudes. Espere {remainingCooldown.TotalMinutes:N0} minutos antes de realizar otra solicitud.";
 
                     if (!string.IsNullOrWhiteSpace(Hub.Config.RotatingRaidSV.RaidSettings.LimitRequestMsg))
                     {
@@ -503,38 +503,36 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
 
             if (seed.Length != 8 || !seed.All(c => "0123456789abcdefABCDEF".Contains(c)))
             {
-                await ReplyAsync("⚠️ Formato de semilla no válido. Ingrese una semilla que consta de exactamente 8 dígitos hexadecimales.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Formato de semilla no válido. Ingrese una semilla que consta de exactamente 8 dígitos hexadecimales.").ConfigureAwait(false);
                 return;
             }
 
             if (level < 1 || level > 7)  // Adjusted level range to 1-7
             {
-                await ReplyAsync("⚠️ Nivel de incursión no válido. Por favor introduzca un nivel entre 1 y 7.").ConfigureAwait(false);  // Adjusted message to reflect new level range
+                await ReplyAsync("<a:warning:1206483664939126795> Nivel de incursión no válido. Por favor introduzca un nivel entre 1 y 7.").ConfigureAwait(false);  // Adjusted message to reflect new level range
                 return;
             }
-
             var gameProgress = ConvertToGameProgress(storyProgressLevel);
             if (gameProgress == GameProgress.None)
             {
-                await ReplyAsync("⚠️ Nivel de progreso de la historia no válido. Por favor introduzca un valor entre 1 y 6.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Nivel de progreso de la historia no válido. Por favor introduzca un valor entre 1 y 6.").ConfigureAwait(false);
                 return;
             }
             var settings = Hub.Config.RotatingRaidSV;
             bool isEvent = !string.IsNullOrEmpty(speciesName);
-
             var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
+
             if (isEvent && selectedMap != TeraRaidMapParent.Paldea)
             {
-                await ReplyAsync("Events can only be run in the Paldea map.");
+                await ReplyAsync("<a:no:1206485104424128593> Los eventos sólo se pueden ejecutar en el mapa de Paldea.");
                 return;
             }
-
             var crystalType = level switch
             {
                 >= 1 and <= 5 => isEvent ? (TeraCrystalType)2 : 0,
                 6 => (TeraCrystalType)1,
                 7 => (TeraCrystalType)3,
-                _ => throw new ArgumentException("✘ Nivel de dificultad no válido.")
+                _ => throw new ArgumentException("<a:warning:1206483664939126795> Nivel de dificultad no válido.")
             };
 
             int raidDeliveryGroupID = -1;
@@ -546,18 +544,18 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
             else if (isEvent)
             {
-                await ReplyAsync("Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
+                await ReplyAsync("<a:warning:1206483664939126795> Nombre de especie no reconocido o no asociado con un evento activo. Por favor revisa el nombre y prueba de nuevo.");
                 return;
             }
 
             if (isEvent && !settings.EventSettings.EventActive)
             {
-                await ReplyAsync("Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Lo sentimos, pero la configuración de eventos está desactivada en este momento o no hay eventos activos.").ConfigureAwait(false);
                 return;
             }
             if (settings.EventSettings.EventActive && storyProgressLevel != 6)
             {
-                await ReplyAsync("⚠️ Actualmente, solo se permite el nivel 6 de progreso de la historia (6* desbloqueado) debido a la configuración del evento activo.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Actualmente, solo se permite el nivel 6 de progreso de la historia (6* desbloqueado) debido a la configuración del evento activo.").ConfigureAwait(false);
                 return;
             }
             int effectiveQueuePosition = 1;
@@ -657,7 +655,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 }
                 catch
                 {
-                    await ReplyAsync($"No se pudo enviar DM a {user.Mention}. Asegúrese de que sus DM estén abiertos.").ConfigureAwait(false);
+                    await ReplyAsync($"<a:warning:1206483664939126795> No se pudo enviar DM a {user.Mention}. Asegúrese de que sus DM estén abiertos.").ConfigureAwait(false);
                 }
             }
             try
@@ -668,12 +666,12 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 }
                 else
                 {
-                    await ReplyAsync("⚠️ No se pudo enviar DM. Asegúrese de que sus DM estén abiertos.").ConfigureAwait(false);
+                    await ReplyAsync("<a:warning:1206483664939126795> No se pudo enviar DM. Asegúrese de que sus DM estén abiertos.").ConfigureAwait(false);
                 }
             }
             catch
             {
-                await ReplyAsync("⚠️ No se pudo enviar DM. Asegúrese de que sus DM estén abiertos.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> No se pudo enviar DM. Asegúrese de que sus DM estén abiertos.").ConfigureAwait(false);
             }
         }
 
@@ -734,7 +732,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var template = AutoLegalityWrapper.GetTemplate(set);
             if (set.InvalidLines.Count != 0 || set.Species <= 0)
             {
-                var msg = $"⚠️ No se puede analizar el conjunto showdown:\n{string.Join("\n", set.InvalidLines)}";
+                var msg = $"<a:warning:1206483664939126795> No se puede analizar el conjunto showdown:\n{string.Join("\n", set.InvalidLines)}";
                 await ReplyAsync(msg).ConfigureAwait(false);
                 return;
             }
@@ -749,7 +747,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 if (pkm is not T pk || !la.Valid)
                 {
                     var reason = result == "Timeout" ? $"Ese conjunto {spec} tardó demasiado en generarse." : $"No pude crear una {spec} a partir de ese conjunto.";
-                    var imsg = $"⚠️ Oops! {reason}";
+                    var imsg = $"<a:warning:1206483664939126795> Oops! {reason}";
                     await ReplyAsync(imsg).ConfigureAwait(false);
                     return;
                 }
@@ -767,14 +765,14 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 }
                 else
                 {
-                    var msg = "You don't have a raid in queue!";
+                    var msg = "<a:warning:1206483664939126795> No tienes una incursión en cola!";
                     await ReplyAsync(msg).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(RaidModule<T>));
-                var msg = $"⚠️ Oops! Ocurrió un problema inesperado con este set de showdown.:\n```{string.Join("\n", set.GetSetLines())}```";
+                var msg = $"<a:warning:1206483664939126795> Oops! Ocurrió un problema inesperado con este set de showdown:\n```{string.Join("\n", set.GetSetLines())}```";
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
         }
@@ -787,7 +785,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var attachment = Context.Message.Attachments.FirstOrDefault();
             if (attachment == default)
             {
-                await ReplyAsync("⚠️ ¡No se proporciona ningún archivo adjunto!").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> No se proporciona ningún archivo adjunto!").ConfigureAwait(false);
                 return;
             }
 
@@ -795,7 +793,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var pk = GetRequest(att);
             if (pk == null)
             {
-                await ReplyAsync("✘ El archivo adjunto proporcionado no es compatible con este módulo!").ConfigureAwait(false);
+                await ReplyAsync("<a:no:1206485104424128593> El archivo adjunto proporcionado no es compatible con este módulo!").ConfigureAwait(false);
                 return;
             }
             else
@@ -814,7 +812,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 }
                 else
                 {
-                    var msg = "⚠️ No tienes una incursión en cola!";
+                    var msg = "<a:warning:1206483664939126795> No tienes una incursión en cola!";
                     await ReplyAsync(msg).ConfigureAwait(false);
                 }
             }
@@ -829,7 +827,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             int currentPosition = RotationCount;
 
             // Find the index of the user's request in the queue, excluding Mystery Shiny Raids
-            var userRequestIndex = Hub.Config.RotatingRaidSV.ActiveRaids.FindIndex(r => r.RequestedByUserID == userId && !r.Title.Contains("✨ Incursión Shiny Misteriosa ✨"));
+            var userRequestIndex = Hub.Config.RotatingRaidSV.ActiveRaids.FindIndex(r => r.RequestedByUserID == userId && !r.Title.Contains("✨ Incursion Shiny Misteriosa ✨"));
 
             EmbedBuilder embed = new();
 
@@ -837,7 +835,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 embed.Title = "Estado de la cola";
                 embed.Color = Color.Red;
-                embed.Description = $"{Context.User.Mention}, no tienes una solicitud de incursión en la cola.";
+                embed.Description = $"<a:warning:1206483664939126795> {Context.User.Mention}, no tienes una solicitud de incursión en la cola.";
             }
             else
             {
@@ -930,21 +928,21 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var userRaid = list.FirstOrDefault(r => r.RequestedByUserID == userId && r.AddedByRACommand);
             if (userRaid == null)
             {
-                await ReplyAsync("⚠️ No tienes una incursión agregada..").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> No tienes una incursión agregada.").ConfigureAwait(false);
                 return;
             }
 
             // Prevent canceling if the raid is up next
             if (userRaid.RaidUpNext)
             {
-                await ReplyAsync("⚠️ Tu solicitud de incursión es la siguiente y no se puede cancelar en este momento..").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Tu solicitud de incursión es la siguiente y no se puede cancelar en este momento.").ConfigureAwait(false);
                 return;
             }
 
             // Remove the raid if it's not up next
             list.Remove(userRaid);
             await Context.Message.DeleteAsync().ConfigureAwait(false);
-            var msg = $"✔ Borraste tu incursión de la cola.";
+            var msg = $"<a:yes:1206485105674166292> Borraste tu incursión de la cola.";
             await ReplyAsync(msg).ConfigureAwait(false);
         }
 
@@ -959,11 +957,11 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 var raid = list[index];
                 list.RemoveAt(index);
-                var msg = $"✔ Incursión de {raid.Title} | {raid.Seed:X8} ha sido eliminada!";
+                var msg = $"<a:yes:1206485105674166292> Incursión de {raid.Title} | {raid.Seed:X8} ha sido eliminada!";
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
             else
-                await ReplyAsync("✘ Índice de parámetros de raid no válido.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Índice de parámetros de raid no válido.").ConfigureAwait(false);
         }
 
         [Command("toggleRaidParams")]
@@ -977,12 +975,12 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 var raid = list[index];
                 raid.ActiveInRotation = !raid.ActiveInRotation;
-                var m = raid.ActiveInRotation ? "activado" : "desactivado";
+                var m = raid.ActiveInRotation ? "enabled" : "disabled";
                 var msg = $"Incursión de {raid.Title} | {raid.Seed:X8} ha sido {m}!";
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
             else
-                await ReplyAsync("✘ Índice de parámetros de raid no válido.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Índice de parámetros de raid no válido.").ConfigureAwait(false);
         }
 
         [Command("togglecodeRaidParams")]
@@ -996,12 +994,12 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 var raid = list[index];
                 raid.IsCoded = !raid.IsCoded;
-                var m = raid.IsCoded ? "Con Codigo" : "Sin Codigo";
+                var m = raid.IsCoded ? "coded" : "uncoded";
                 var msg = $"Incursión de {raid.Title} | {raid.Seed:X8} ahora es {m}!";
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
             else
-                await ReplyAsync("✘ Índice de parámetros de raid no válido.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Índice de parámetros de raid no válido.").ConfigureAwait(false);
         }
 
         [Command("changeRaidParamTitle")]
@@ -1019,7 +1017,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
             else
-                await ReplyAsync("✘ Índice de parámetros de raid no válido.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Índice de parámetros de raid no válido.").ConfigureAwait(false);
         }
 
         [Command("viewraidList")]
@@ -1047,7 +1045,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 }
                 embed.AddField($"Lista de incursiones - Parte {i + 1}", fieldBuilder.ToString(), false);
             }
-            await ReplyAsync($"📝 Estas son las redadas actualmente en la lista (total: {count}):", embed: embed.Build()).ConfigureAwait(false);
+            await ReplyAsync($"📝 Estas son las incursiones actualmente en la lista (total: {count}):", embed: embed.Build()).ConfigureAwait(false);
         }
 
         [Command("toggleRaidPK")]
@@ -1066,7 +1064,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
             else
-                await ReplyAsync("✘ Índice de parámetros de raid no válido.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Índice de parámetros de raid no válido.").ConfigureAwait(false);
         }
 
         [Command("raidhelp")]
@@ -1093,7 +1091,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 x.Value = msg;
                 x.IsInline = false;
             });
-            await ReplyAsync("✔ ¡Aquí está tu ayuda para la incursión!", embed: embed.Build()).ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Aquí está tu ayuda para la incursión!", embed: embed.Build()).ConfigureAwait(false);
         }
 
         [Command("unbanrotatingraider")]
@@ -1103,11 +1101,11 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
         public async Task UnbanRotatingRaider([Summary("Removes the specificed NID from the banlist for Raids in SV.")] string nid)
         {
             var list = Hub.Config.RotatingRaidSV.RaiderBanList.List.ToArray();
-            string msg = $"{Context.User.Mention} no se encontró ningún usuario con ese NID.";
+            string msg = $"<a:warning:1206483664939126795> {Context.User.Mention} no se encontró ningún usuario con ese NID.";
             for (int i = 0; i < list.Length; i++)
                 if ($"{list[i].ID}".Equals(nid))
                 {
-                    msg = $"{Context.User.Mention} el usuario {list[i].Name} - {list[i].ID} ha sido desbaneado.";
+                    msg = $"<a:yes:1206485105674166292> {Context.User.Mention} el usuario {list[i].Name} - {list[i].ID} ha sido desbaneado.";
                     Hub.Config.RotatingRaidSV.RaiderBanList.List.ToList().Remove(list[i]);
                 }
             await ReplyAsync(msg).ConfigureAwait(false);

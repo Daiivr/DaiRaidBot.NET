@@ -45,6 +45,7 @@ namespace SysBot.Pokemon
                         OT = OT,
                         Generation = (byte)i,
                     };
+
                     var exist = TrainerSettings.GetSavedTrainerData((byte)gameVersion, (GameVersion)(byte)i, fallback);
                     if (exist is SimpleTrainerInfo) // not anything from files; this assumes ALM returns SimpleTrainerInfo for non-user-provided fake templates.
                         TrainerSettings.Register(fallback);

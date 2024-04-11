@@ -23,7 +23,7 @@ namespace SysBot.Pokemon.Discord
             var users = Context.Message.MentionedUsers;
             var objects = users.Select(GetReference);
             SysCordSettings.Settings.GlobalSudoList.AddIfNew(objects);
-            await ReplyAsync("Done.").ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
         }
 
         [Command("removeSudo")]
@@ -34,7 +34,7 @@ namespace SysBot.Pokemon.Discord
             var users = Context.Message.MentionedUsers;
             var objects = users.Select(GetReference);
             SysCordSettings.Settings.GlobalSudoList.RemoveAll(z => objects.Any(o => o.ID == z.ID));
-            await ReplyAsync("Done.").ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
         }
 
         [Command("addChannel")]
@@ -44,7 +44,7 @@ namespace SysBot.Pokemon.Discord
         {
             var obj = GetReference(Context.Message.Channel);
             SysCordSettings.Settings.ChannelWhitelist.AddIfNew(new[] { obj });
-            await ReplyAsync("Done.").ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
         }
 
         [Command("removeChannel")]
@@ -54,7 +54,7 @@ namespace SysBot.Pokemon.Discord
         {
             var obj = GetReference(Context.Message.Channel);
             SysCordSettings.Settings.ChannelWhitelist.RemoveAll(z => z.ID == obj.ID);
-            await ReplyAsync("Done.").ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
         }
 
         [Command("leave")]
@@ -75,17 +75,17 @@ namespace SysBot.Pokemon.Discord
         {
             if (!ulong.TryParse(userInput, out ulong id))
             {
-                await ReplyAsync("Please provide a valid Guild ID.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> Proporcione una identificación válida de servidor!").ConfigureAwait(false);
                 return;
             }
             var guild = Context.Client.Guilds.FirstOrDefault(x => x.Id == id);
             if (guild is null)
             {
-                await ReplyAsync($"Provided input ({userInput}) is not a valid guild ID or the bot is not in the specified guild.").ConfigureAwait(false);
+                await ReplyAsync($"<a:yes:1206485105674166292> La entrada proporcionada ({userInput}) no es un ID de server válido o el bot no está en el servidor especificado.").ConfigureAwait(false);
                 return;
             }
 
-            await ReplyAsync($"Leaving {guild}.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> Abandonando {guild}.").ConfigureAwait(false);
             await guild.LeaveAsync().ConfigureAwait(false);
         }
 
@@ -94,7 +94,7 @@ namespace SysBot.Pokemon.Discord
         [RequireOwner]
         public async Task LeaveAll()
         {
-            await ReplyAsync("Leaving all servers.").ConfigureAwait(false);
+            await ReplyAsync("<a:yes:1206485105674166292> Abandonando todos los servidores.").ConfigureAwait(false);
             foreach (var guild in Context.Client.Guilds)
             {
                 await guild.LeaveAsync().ConfigureAwait(false);
@@ -114,7 +114,7 @@ namespace SysBot.Pokemon.Discord
             {
                 guildList.AppendLine($"{Format.Bold($"{guild.Name}")}\nID: {guild.Id}\n");
             }
-            await Util.ListUtil(Context, "Here is a list of all servers this bot is currently in", guildList.ToString()).ConfigureAwait(false);
+            await Util.ListUtil(Context, "Aquí hay una lista de todos los servidores en los que se encuentra actualmente este bot.", guildList.ToString()).ConfigureAwait(false);
         }
 
         [Command("sudoku")]
@@ -123,7 +123,7 @@ namespace SysBot.Pokemon.Discord
         [RequireOwner]
         public async Task ExitProgram()
         {
-            await Context.Channel.EchoAndReply("Shutting down... goodbye! **Bot services are going offline.**").ConfigureAwait(false);
+            await Context.Channel.EchoAndReply("<a:yes:1206485105674166292> Cerrando... ¡adiós! **Los servicios del bot se están desconectando.**").ConfigureAwait(false);
             Environment.Exit(0);
         }
 
@@ -254,14 +254,14 @@ namespace SysBot.Pokemon.Discord
         {
             ID = channel.Id,
             Name = channel.Username,
-            Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
+            Comment = $"Añadido por {Context.User.Username} el {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
         };
 
         private RemoteControlAccess GetReference(IChannel channel) => new()
         {
             ID = channel.Id,
             Name = channel.Name,
-            Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
+            Comment = $"Añadido por {Context.User.Username} el {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
         };
     }
 }

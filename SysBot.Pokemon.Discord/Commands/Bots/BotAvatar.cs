@@ -17,7 +17,7 @@ namespace SysBot.Pokemon.Discord
         {
             if (Context.Message.Attachments.Count == 0)
             {
-                await ReplyAsync("Adjunte una imagen GIF para establecerla como avatar.."); // standard (boring) images can be set via dashboard
+                await ReplyAsync("<a:warning:1206483664939126795> Adjunte una imagen GIF para establecerla como avatar."); // standard (boring) images can be set via dashboard
                 return;
             }
             var attachment = Context.Message.Attachments.First();
@@ -34,7 +34,7 @@ namespace SysBot.Pokemon.Discord
             var image = new Image(ms);
             await Context.Client.CurrentUser.ModifyAsync(user => user.Avatar = image);
 
-            await ReplyAsync("¡Avatar actualizado exitosamente!");
+            await ReplyAsync("<a:yes:1206485105674166292> Avatar actualizado exitosamente!");
         }
     }
 }

@@ -87,14 +87,14 @@ namespace SysBot.Pokemon.Discord
 
             if (!result.IsSuccess)
             {
-                await ReplyAsync($"Sorry, I couldn't find a command like **{command}**.").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Lo siento, no pude encontrar un comando como **{command}**.").ConfigureAwait(false);
                 return;
             }
 
             var builder = new EmbedBuilder
             {
                 Color = new Color(114, 137, 218),
-                Description = $"Here are some commands like **{command}**:",
+                Description = $"Aquí hay algunos comandos como **{command}**:",
             };
 
             foreach (var match in result.Commands)
@@ -109,12 +109,12 @@ namespace SysBot.Pokemon.Discord
                 });
             }
 
-            await ReplyAsync("Help has arrived!", false, builder.Build()).ConfigureAwait(false);
+            await ReplyAsync("ha llegado la ayuda!", false, builder.Build()).ConfigureAwait(false);
         }
 
         private static string GetCommandSummary(CommandInfo cmd)
         {
-            return $"Summary: {cmd.Summary}\nParameters: {GetParameterSummary(cmd.Parameters)}";
+            return $"Resumen: {cmd.Summary}\nParámetros: {GetParameterSummary(cmd.Parameters)}";
         }
 
         private static string GetParameterSummary(IReadOnlyList<ParameterInfo> p)

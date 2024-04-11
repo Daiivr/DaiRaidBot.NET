@@ -192,9 +192,9 @@ namespace SysBot.Base
         public static byte[] PokeMain(ulong offset, byte[] data, bool crlf = true) => Encode($"pokeMain 0x{offset:X16} 0x{string.Concat(data.Select(z => $"{z:X2}"))}", crlf);
 
         /*
-         * 
+         *
          * Pointer Commands
-         * 
+         *
          */
 
         /// <summary>
@@ -231,7 +231,7 @@ namespace SysBot.Base
         /// <returns>Encoded command bytes</returns>
         public static byte[] PointerRelative(IEnumerable<long> jumps, bool crlf = true) => Encode($"pointerRelative{string.Concat(jumps.Select(z => $" {z}"))}", crlf);
 
-        /* 
+        /*
          *
          * Process Info Commands
          *

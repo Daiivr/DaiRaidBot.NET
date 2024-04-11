@@ -45,12 +45,32 @@ namespace SysBot.Base
             Connection.Disconnect();
         }
 
+        public async Task RebootResetAsync(CancellationToken token)
+        {
+            Connection.Connect();
+            await InitialStartup(token).ConfigureAwait(false);
+            await RebootReset(token).ConfigureAwait(false);
+            Connection.Disconnect();
+        }
+
+        public async Task RefreshMapAsync(CancellationToken token)
+        {
+            Connection.Connect();
+            await InitialStartup(token).ConfigureAwait(false);
+            await RefreshMap(token).ConfigureAwait(false);
+            Connection.Disconnect();
+        }
+
         public abstract Task MainLoop(CancellationToken token);
-        
+
         public abstract Task InitialStartup(CancellationToken token);
-        
+
         public abstract void SoftStop();
-        
+
         public abstract Task HardStop();
+
+        public abstract Task RebootReset(CancellationToken token);
+
+        public abstract Task RefreshMap(CancellationToken token);
     }
 }

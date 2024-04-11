@@ -21,7 +21,7 @@ namespace SysBot.Pokemon.Discord
             var bots = me.Bots.Select(z => z.Bot).OfType<PokeRoutineExecutorBase>().ToArray();
             if (bots.Length == 0)
             {
-                await ReplyAsync("No bots configured.").ConfigureAwait(false);
+                await ReplyAsync("<a:warning:1206483664939126795> No hay bots configurados.").ConfigureAwait(false);
                 return;
             }
 
@@ -35,7 +35,7 @@ namespace SysBot.Pokemon.Discord
             try
             {
                 // Read the file and parse the JSON
-                var jsonData = File.ReadAllText(NotRaidBot.ConfigPath);
+                var jsonData = File.ReadAllText(DaiRaidBot.ConfigPath);
                 var config = JObject.Parse(jsonData);
 
                 // Access the IP address from the first bot in the Bots array
@@ -45,7 +45,7 @@ namespace SysBot.Pokemon.Discord
             catch (Exception ex)
             {
                 // Handle any errors that occur during reading or parsing the file
-                Console.WriteLine($"Error reading config file: {ex.Message}");
+                Console.WriteLine($"<a:warning:1206483664939126795> Error al leer el archivo de configuración: {ex.Message}");
                 return "192.168.1.1"; // Default IP if error occurs
             }
         }
@@ -64,12 +64,12 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP: ({ip}).").ConfigureAwait(false);
                 return;
             }
 
             bot.Start();
-            await ReplyAsync($"Bot has been started.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> El bot ha recibido la orden de Iniciar.").ConfigureAwait(false);
         }
 
         [Command("botStop")]
@@ -81,12 +81,12 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP: ({ip}).").ConfigureAwait(false);
                 return;
             }
 
             bot.Stop();
-            await ReplyAsync($"Bot has been stopped.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> El bot ha recibido la orden de Parar.").ConfigureAwait(false);
         }
 
         [Command("botIdle")]
@@ -99,12 +99,12 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP: ({ip}).").ConfigureAwait(false);
                 return;
             }
 
             bot.Pause();
-            await ReplyAsync($"Bot has been set to idle.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292>El bot ha sido comandado a Idle.").ConfigureAwait(false);
         }
 
         [Command("botChange")]
@@ -116,12 +116,12 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP: ({ip}).").ConfigureAwait(false);
                 return;
             }
 
             bot.Bot.Config.Initialize(task);
-            await ReplyAsync($"Bot has changed its routine to {task}.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> El bot ha recibido la orden de realizar **{task}** como su próxima tarea.").ConfigureAwait(false);
         }
 
         [Command("botRestart")]
@@ -133,14 +133,14 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP: ({ip}).").ConfigureAwait(false);
                 return;
             }
 
             var c = bot.Bot.Connection;
             c.Reset();
             bot.Start();
-            await ReplyAsync($"Bot has been restarted.").ConfigureAwait(false);
+            await ReplyAsync($"<a:yes:1206485105674166292> El bot ha recibido la orden de Reiniciarse.").ConfigureAwait(false);
         }
     }
 }

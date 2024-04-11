@@ -15,13 +15,13 @@ namespace SysBot.Base
         public bool IsPaused { get; private set; }
 
         private bool IsStopping { get; set; }
-        
+
         // Retry connection if bot crashes
         private int retryCount = 0;
-        
+
         private DateTime firstFailureTime;
         private bool isFirstFailure = true;
-        
+
         public void Stop()
         {
             if (!IsRunning || IsStopping)
@@ -56,6 +56,35 @@ namespace SysBot.Base
                 return;
 
             Task.Run(() => Bot.RunAsync(Source.Token)
+                .ContinueWith(ReportFailure, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously)
+                .ContinueWith(_ => IsRunning = false));
+
+            IsRunning = true;
+        }
+
+        public void RebootReset()
+        {
+            if (IsPaused)
+                Stop(); // can't soft-resume; just re-launch
+
+            if (IsRunning || IsStopping)
+                return;
+
+            Task.Run(() => Bot.RebootResetAsync(Source.Token)
+                .ContinueWith(ReportFailure, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously)
+                .ContinueWith(_ => IsRunning = false));
+
+            IsRunning = true;
+        }
+
+        public void RefreshMap()
+        {
+            if (IsPaused)
+                Stop(); // can't soft-resume; just re-launch
+            if (IsRunning || IsStopping)
+                return;
+
+            Task.Run(() => Bot.RefreshMapAsync(Source.Token)
                 .ContinueWith(ReportFailure, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously)
                 .ContinueWith(_ => IsRunning = false));
 

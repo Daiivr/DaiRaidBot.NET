@@ -157,6 +157,8 @@ namespace SysBot.Pokemon.WinForms
                 case BotControlCommand.Start: bot.Start(); break;
                 case BotControlCommand.Stop: bot.Stop(); break;
                 case BotControlCommand.Resume: bot.Resume(); break;
+                case BotControlCommand.RebootReset: bot.RebootReset(); break;
+                case BotControlCommand.RefreshMap: bot.RefreshMap(); break;
                 case BotControlCommand.Restart:
                     {
                         var prompt = WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Are you sure you want to restart the connection?");
@@ -201,21 +203,6 @@ namespace SysBot.Pokemon.WinForms
                 ReloadStatus(bot);
             }
         }
-
-        private void L_Description_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void L_Left_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void PB_Lamp_Click(object sender, EventArgs e)
-        {
-
-        }
     }
 
     public enum BotControlCommand
@@ -226,6 +213,8 @@ namespace SysBot.Pokemon.WinForms
         Idle,
         Resume,
         Restart,
+        RebootReset,
+        RefreshMap,
     }
 
     public static class BotControlCommandExtensions

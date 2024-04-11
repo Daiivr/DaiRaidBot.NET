@@ -21,7 +21,7 @@ namespace SysBot.Pokemon.WinForms
 
         public readonly ISwitchConnectionAsync? SwitchConnection;
         public static bool IsUpdating { get; set; } = false;
-		
+
         public Main()
         {
             InitializeComponent();
@@ -58,7 +58,7 @@ namespace SysBot.Pokemon.WinForms
             }
 
             LoadControls();
-            Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "DaiRaidBot.NET" : Config.Hub.BotName)} {NotRaidBot.Version} ({Config.Mode})";
+            Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "DaiRaidBot.NET" : Config.Hub.BotName)} {DaiRaidBot.Version} ({Config.Mode})";
             Task.Run(BotMonitor);
             InitUtil.InitializeStubs(Config.Mode);
         }
@@ -80,7 +80,7 @@ namespace SysBot.Pokemon.WinForms
         private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Mode switch
         {
             ProgramMode.SV => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
-            _ => throw new IndexOutOfRangeException("Unsupported mode."),
+            _ => throw new IndexOutOfRangeException("Modo no compatible."),
         };
 
         private async Task BotMonitor()
@@ -139,23 +139,23 @@ namespace SysBot.Pokemon.WinForms
                     case "Dark Mode":
                         ApplyDarkTheme();
                         break;
-						
+
                     case "Light Mode":
                         ApplyLightTheme();
                         break;
-						
+
                     case "Poke Mode":
                         ApplyPokemonTheme();
                         break;
-						
+
                     case "Gengar Mode":
                         ApplyGengarTheme();
                         break;
-						
+
                     case "Sylveon Mode":
                         ApplySylveonTheme();
                         break;
-						
+
                     default:
                         ApplyLightTheme();  // Default to Light Mode if no matching theme is found
                         break;
@@ -241,7 +241,39 @@ namespace SysBot.Pokemon.WinForms
             Tab_Logs.Select();
 
             if (Bots.Count == 0)
-                WinFormsUtil.Alert("No hay bots configurados, pero se han iniciado todos los servicios de apoyo.");
+                WinFormsUtil.Alert("No se han configurado bots, pero se han iniciado todos los servicios de soporte..");
+        }
+
+        private void B_RebootReset_Click(object sender, EventArgs e)
+        {
+            B_Stop_Click(sender, e);
+            Task.Run(async () =>
+            {
+                await Task.Delay(3_500).ConfigureAwait(false);
+                SaveCurrentConfig();
+                LogUtil.LogInfo("Restarting all the consoles...", "Form");
+                RunningEnvironment.InitializeStart();
+                SendAll(BotControlCommand.RebootReset);
+                Tab_Logs.Select();
+                if (Bots.Count == 0)
+                    WinFormsUtil.Alert("No se han configurado bots, pero a todos los servicios de soporte se les ha emitido el comando de reinicio.");
+            });
+        }
+
+        private void RefreshMap_Click(object sender, EventArgs e)
+        {
+            B_Stop_Click(sender, e);
+            Task.Run(async () =>
+            {
+                await Task.Delay(3_500).ConfigureAwait(false);
+                SaveCurrentConfig();
+                LogUtil.LogInfo("Refreshing map...", "Form");
+                RunningEnvironment.InitializeStart();
+                SendAll(BotControlCommand.RefreshMap);
+                Tab_Logs.Select();
+                if (Bots.Count == 0)
+                    WinFormsUtil.Alert("No se han configurado bots, pero a todos los servicios de soporte se les ha emitido el comando de actualización del mapa..");
+            });
         }
 
         private void SendAll(BotControlCommand cmd)
@@ -389,24 +421,24 @@ namespace SysBot.Pokemon.WinForms
                     case "Light Mode":
                         ApplyLightTheme();
                         break;
-                    
-					case "Dark Mode":
+
+                    case "Dark Mode":
                         ApplyDarkTheme();
                         break;
-                    
-					case "Poke Mode":
+
+                    case "Poke Mode":
                         ApplyPokemonTheme();
                         break;
-                    
-					case "Gengar Mode":
+
+                    case "Gengar Mode":
                         ApplyGengarTheme();
                         break;
-                    
-					case "Sylveon Mode":
+
+                    case "Sylveon Mode":
                         ApplySylveonTheme();
                         break;
-                    
-					default:
+
+                    default:
                         ApplyLightTheme();  // Default to Light Mode if no matching theme is found
                         break;
                 }
@@ -421,6 +453,9 @@ namespace SysBot.Pokemon.WinForms
             Color SkyBlue = Color.FromArgb(135, 206, 250);    // A soft blue color inspired by Sylveon's eyes and ribbons
             Color DeepBlue = Color.FromArgb(70, 130, 180);   // A deeper blue for contrast
             Color ElegantWhite = Color.FromArgb(255, 255, 255);// An elegant white for background and contrast
+            Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
+            Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
+            Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
 
             // Set the background color of the form
             BackColor = ElegantWhite;
@@ -472,11 +507,14 @@ namespace SysBot.Pokemon.WinForms
             comboBox1.BackColor = SkyBlue;
             comboBox1.ForeColor = DeepBlue;
 
-            B_Stop.BackColor = DeepPink;
+            B_Stop.BackColor = StopRed;
             B_Stop.ForeColor = ElegantWhite;
 
-            B_Start.BackColor = DeepPink;
+            B_Start.BackColor = StartGreen;
             B_Start.ForeColor = ElegantWhite;
+
+            B_RebootReset.BackColor = RebootBlue;
+            B_RebootReset.ForeColor = ElegantWhite;
         }
 
         private void ApplyGengarTheme()
@@ -487,6 +525,10 @@ namespace SysBot.Pokemon.WinForms
             Color GhostlyGrey = Color.FromArgb(200, 200, 215); // A soft grey for text and borders
             Color HauntingBlue = Color.FromArgb(80, 80, 160);  // A haunting blue for accenting and highlights
             Color MidnightBlack = Color.FromArgb(25, 25, 35);  // A near-black for the darkest areas
+            Color ElegantWhite = Color.FromArgb(255, 255, 255);// An elegant white for background and contrast
+            Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
+            Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
+            Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
 
             // Set the background color of the form
             BackColor = MidnightBlack;
@@ -538,11 +580,14 @@ namespace SysBot.Pokemon.WinForms
             comboBox1.BackColor = GengarPurple;
             comboBox1.ForeColor = GhostlyGrey;
 
-            B_Stop.BackColor = HauntingBlue;
-            B_Stop.ForeColor = GhostlyGrey;
+            B_Stop.BackColor = StopRed;
+            B_Stop.ForeColor = ElegantWhite;
 
-            B_Start.BackColor = HauntingBlue;
-            B_Start.ForeColor = GhostlyGrey;
+            B_Start.BackColor = StartGreen;
+            B_Start.ForeColor = ElegantWhite;
+
+            B_RebootReset.BackColor = RebootBlue;
+            B_RebootReset.ForeColor = ElegantWhite;
         }
 
         private void ApplyLightTheme()
@@ -551,6 +596,10 @@ namespace SysBot.Pokemon.WinForms
             Color SoftBlue = Color.FromArgb(235, 245, 251);
             Color GentleGrey = Color.FromArgb(245, 245, 245);
             Color DarkBlue = Color.FromArgb(26, 13, 171);
+            Color ElegantWhite = Color.FromArgb(255, 255, 255);// An elegant white for background and contrast
+            Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
+            Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
+            Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
 
             // Set the background color of the form
             BackColor = GentleGrey;
@@ -602,11 +651,14 @@ namespace SysBot.Pokemon.WinForms
             comboBox1.BackColor = Color.White;
             comboBox1.ForeColor = DarkBlue;
 
-            B_Stop.BackColor = SoftBlue;
-            B_Stop.ForeColor = DarkBlue;
+            B_Stop.BackColor = StopRed;
+            B_Stop.ForeColor = ElegantWhite;
 
-            B_Start.BackColor = SoftBlue;
-            B_Start.ForeColor = DarkBlue;
+            B_Start.BackColor = StartGreen;
+            B_Start.ForeColor = ElegantWhite;
+
+            B_RebootReset.BackColor = RebootBlue;
+            B_RebootReset.ForeColor = ElegantWhite;
         }
 
         private void ApplyPokemonTheme()
@@ -617,6 +669,10 @@ namespace SysBot.Pokemon.WinForms
             Color SleekGrey = Color.FromArgb(46, 49, 54);     // A sleek grey for background and contrast
             Color SoftWhite = Color.FromArgb(230, 230, 230);  // A soft white for text and borders
             Color MidnightBlack = Color.FromArgb(18, 19, 20); // A near-black for darker elements and depth
+            Color ElegantWhite = Color.FromArgb(255, 255, 255);// An elegant white for background and contrast
+            Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
+            Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
+            Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
 
             // Set the background color of the form
             BackColor = SleekGrey;
@@ -668,11 +724,14 @@ namespace SysBot.Pokemon.WinForms
             comboBox1.BackColor = DarkPokeRed;
             comboBox1.ForeColor = SoftWhite;
 
-            B_Stop.BackColor = PokeRed;
-            B_Stop.ForeColor = SoftWhite;
+            B_Stop.BackColor = StopRed;
+            B_Stop.ForeColor = ElegantWhite;
 
-            B_Start.BackColor = PokeRed;
-            B_Start.ForeColor = SoftWhite;
+            B_Start.BackColor = StartGreen;
+            B_Start.ForeColor = ElegantWhite;
+
+            B_RebootReset.BackColor = RebootBlue;
+            B_RebootReset.ForeColor = ElegantWhite;
         }
 
         private void ApplyDarkTheme()
@@ -682,6 +741,10 @@ namespace SysBot.Pokemon.WinForms
             Color DarkGrey = Color.FromArgb(30, 30, 30);
             Color LightGrey = Color.FromArgb(60, 60, 60);
             Color SoftWhite = Color.FromArgb(245, 245, 245);
+            Color ElegantWhite = Color.FromArgb(255, 255, 255);// An elegant white for background and contrast
+            Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
+            Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
+            Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
 
             // Set the background color of the form
             BackColor = DarkGrey;
@@ -733,11 +796,14 @@ namespace SysBot.Pokemon.WinForms
             comboBox1.BackColor = LightGrey;
             comboBox1.ForeColor = SoftWhite;
 
-            B_Stop.BackColor = DarkRed;
-            B_Stop.ForeColor = SoftWhite;
+            B_Stop.BackColor = StopRed;
+            B_Stop.ForeColor = ElegantWhite;
 
-            B_Start.BackColor = DarkRed;
-            B_Start.ForeColor = SoftWhite;
+            B_Start.BackColor = StartGreen;
+            B_Start.ForeColor = ElegantWhite;
+
+            B_RebootReset.BackColor = RebootBlue;
+            B_RebootReset.ForeColor = ElegantWhite;
         }
     }
 }

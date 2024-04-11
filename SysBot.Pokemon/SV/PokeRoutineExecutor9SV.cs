@@ -4,7 +4,6 @@ using SysBot.Base;
 using SysBot.Pokemon.SV.BotRaid;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -24,6 +23,7 @@ namespace SysBot.Pokemon.SV
         private ulong KeyBlockAddress = 0;
 
         public ulong BaseBlockKeyPointer;
+
         protected PokeRoutineExecutor9SV(PokeBotState cfg) : base(cfg)
         {
         }
@@ -71,9 +71,10 @@ namespace SysBot.Pokemon.SV
                 await CheckForRAMShiftingApps(token).ConfigureAwait(false);
                 throw new Exception("Refer to the SysBot.NET wiki (https://github.com/kwsch/SysBot.NET/wiki/Troubleshooting) for more information.");
             }
+
             return await GetTextSpeed(token).ConfigureAwait(false) < TextSpeedOption.Fast
-                            ? throw new Exception("Text speed should be set to FAST. Fix this for correct operation.")
-                            : sav;
+                ? throw new Exception("Text speed should be set to FAST. Fix this for correct operation.")
+                : sav;
         }
 
         public async Task<SAV9SV> GetFakeTrainerSAV(CancellationToken token)
@@ -338,7 +339,6 @@ namespace SysBot.Pokemon.SV
                 deliveryLotteryRewardFlatbuffer
             );
         }
-
 
         public static (PK9, uint) IsSeedReturned(ITeraRaid enc, Raid raid)
         {

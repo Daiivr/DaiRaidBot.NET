@@ -167,13 +167,13 @@ namespace SysBot.Pokemon
             string markEntryText = "";
             HasMark((IRibbonIndex)pk, out RibbonIndex mark);
             if (mark == RibbonIndex.MarkMightiest)
-                markEntryText = " The Unrivaled";
+                markEntryText = " el Imbatible";
             if (pk is PK9 pkl)
             {
                 if (pkl.Scale == 0)
-                    markEntryText = " The Teeny";
+                    markEntryText = " el Diminuto";
                 if (pkl.Scale == 255)
-                    markEntryText = " The Great";
+                    markEntryText = " el Gigante";
             }
             return markEntryText;
         }

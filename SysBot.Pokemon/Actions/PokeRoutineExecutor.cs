@@ -43,7 +43,7 @@ namespace SysBot.Pokemon
 
         // Check if either Tesla or dmnt are active if the sanity check for Trainer Data fails, as these are common culprits.
         private const ulong ovlloaderID = 0x420000000007e51a; // Tesla Menu
-        
+
         private const ulong dmntID = 0x010000000000000d;      // dmnt used for cheats
 
         public async Task CheckForRAMShiftingApps(CancellationToken token)
@@ -54,22 +54,22 @@ namespace SysBot.Pokemon
             var msg = "";
             if (await SwitchConnection.IsProgramRunning(ovlloaderID, token).ConfigureAwait(false))
             {
-                msg += "Found Tesla Menu";
+                msg += "Menú Tesla encontrado";
                 found = true;
             }
 
             if (await SwitchConnection.IsProgramRunning(dmntID, token).ConfigureAwait(false))
             {
                 if (found)
-                    msg += " and ";
-                msg += "dmnt (cheat codes?)";
+                    msg += " y ";
+                msg += "dmnt (¿códigos de trucos?)";
                 found = true;
             }
             if (found)
             {
                 msg += ".";
                 Log(msg);
-                Log("Please remove interfering applications and reboot the Switch.");
+                Log("Elimine las aplicaciones que interfieren y reinicie el Switch.");
             }
         }
     }

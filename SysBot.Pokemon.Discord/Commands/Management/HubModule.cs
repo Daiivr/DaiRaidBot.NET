@@ -29,20 +29,20 @@ namespace SysBot.Pokemon.Discord
             var botCount = allBots.Count;
             builder.AddField(x =>
             {
-                x.Name = "Summary";
+                x.Name = "Resumen";
                 x.Value =
-                    $"Bot Count: {botCount}\n" +
-                    $"Bot State: {SummarizeBots(allBots)}\n";
+                    $"Recuento de bots: {botCount}\n" +
+                    $"Estado de los Bot: {SummarizeBots(allBots)}\n";
                 x.IsInline = false;
             });
 
-            await ReplyAsync("Bot Status", false, builder.Build()).ConfigureAwait(false);
+            await ReplyAsync("Estado del Bot", false, builder.Build()).ConfigureAwait(false);
         }
 
         private static string SummarizeBots(IReadOnlyCollection<RoutineExecutor<PokeBotState>> bots)
         {
             if (bots.Count == 0)
-                return "No bots configured.";
+                return "<a:warning:1206483664939126795> No hay bots configurados.";
             var summaries = bots.Select(z => $"- {z.GetSummary()}");
             return Environment.NewLine + string.Join(Environment.NewLine, summaries);
         }

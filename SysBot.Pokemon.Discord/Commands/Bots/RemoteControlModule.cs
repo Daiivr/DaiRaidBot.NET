@@ -18,7 +18,7 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.Bots.Find(z => IsRemoteControlBot(z.Bot));
             if (bot == null)
             {
-                await ReplyAsync($"No bot is available to execute your command: {b}").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> No hay ningún bot disponible para ejecutar su comando: {b}").ConfigureAwait(false);
                 return;
             }
 
@@ -33,7 +33,7 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot is available to execute your command: {b}").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> No hay ningún bot disponible para ejecutar su comando: {b}").ConfigureAwait(false);
                 return;
             }
 
@@ -48,7 +48,7 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.Bots.Find(z => IsRemoteControlBot(z.Bot));
             if (bot == null)
             {
-                await ReplyAsync($"No bot is available to execute your command: {s}").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> No hay ningún bot disponible para ejecutar su comando: {s}").ConfigureAwait(false);
                 return;
             }
 
@@ -63,7 +63,7 @@ namespace SysBot.Pokemon.Discord
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP ({ip}).").ConfigureAwait(false);
                 return;
             }
 
@@ -111,14 +111,14 @@ namespace SysBot.Pokemon.Discord
             var bot = GetBot(ip);
             if (bot == null)
             {
-                await ReplyAsync($"No bot has that IP address ({ip}).").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Ningún bot tiene esa dirección IP ({ip}).").ConfigureAwait(false);
                 return;
             }
 
             var b = bot.Bot;
             var crlf = b is SwitchRoutineExecutor<PokeBotState> { UseCRLF: true };
             await b.Connection.SendAsync(SwitchCommand.SetScreen(on ? ScreenState.On : ScreenState.Off, crlf), CancellationToken.None).ConfigureAwait(false);
-            await ReplyAsync("Screen state set to: " + (on ? "On" : "Off")).ConfigureAwait(false);
+            await ReplyAsync("Estado de pantalla configurado a: " + (on ? "On" : "Off")).ConfigureAwait(false);
         }
 
         private static BotSource<PokeBotState>? GetBot(string ip)
@@ -131,31 +131,31 @@ namespace SysBot.Pokemon.Discord
         {
             if (!Enum.IsDefined(typeof(SwitchButton), button))
             {
-                await ReplyAsync($"Unknown button value: {button}").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> Valor del botón desconocido: {button}").ConfigureAwait(false);
                 return;
             }
 
             var b = bot.Bot;
             var crlf = b is SwitchRoutineExecutor<PokeBotState> { UseCRLF: true };
             await b.Connection.SendAsync(SwitchCommand.Click(button, crlf), CancellationToken.None).ConfigureAwait(false);
-            await ReplyAsync($"{b.Connection.Name} has performed: {button}").ConfigureAwait(false);
+            await ReplyAsync($"{b.Connection.Name} ha realizado: {button}").ConfigureAwait(false);
         }
 
         private async Task SetStickAsyncImpl(SwitchStick s, short x, short y, ushort ms, BotSource<PokeBotState> bot)
         {
             if (!Enum.IsDefined(typeof(SwitchStick), s))
             {
-                await ReplyAsync($"Unknown stick: {s}").ConfigureAwait(false);
+                await ReplyAsync($"<a:warning:1206483664939126795> stick desconocido: {s}").ConfigureAwait(false);
                 return;
             }
 
             var b = bot.Bot;
             var crlf = b is SwitchRoutineExecutor<PokeBotState> { UseCRLF: true };
             await b.Connection.SendAsync(SwitchCommand.SetStick(s, x, y, crlf), CancellationToken.None).ConfigureAwait(false);
-            await ReplyAsync($"{b.Connection.Name} has performed: {s}").ConfigureAwait(false);
+            await ReplyAsync($"{b.Connection.Name} ha realizado: {s}").ConfigureAwait(false);
             await Task.Delay(ms).ConfigureAwait(false);
             await b.Connection.SendAsync(SwitchCommand.ResetStick(s, crlf), CancellationToken.None).ConfigureAwait(false);
-            await ReplyAsync($"{b.Connection.Name} has reset the stick position.").ConfigureAwait(false);
+            await ReplyAsync($"{b.Connection.Name} ha restablecido la posición del joystick.").ConfigureAwait(false);
         }
 
         private bool IsRemoteControlBot(RoutineExecutor<PokeBotState> botstate)
