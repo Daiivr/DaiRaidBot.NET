@@ -79,16 +79,11 @@ namespace SysBot.Base
 
         public void RefreshMap()
         {
-            if (IsPaused)
-                Stop(); // can't soft-resume; just re-launch
-            if (IsRunning || IsStopping)
+            if (IsStopping)
                 return;
 
             Task.Run(() => Bot.RefreshMapAsync(Source.Token)
-                .ContinueWith(ReportFailure, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously)
-                .ContinueWith(_ => IsRunning = false));
-
-            IsRunning = true;
+                .ContinueWith(ReportFailure, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously));
         }
 
         private void ReportFailure(Task finishedTask)

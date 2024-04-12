@@ -1,5 +1,6 @@
 using Discord;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PKHeX.Core;
 using RaidCrawler.Core.Structures;
 using SysBot.Base;
@@ -66,16 +67,17 @@ namespace SysBot.Pokemon.SV.BotRaid
         private string BaseDescription = string.Empty;
         private readonly Dictionary<ulong, int> RaidTracker = [];
         private SAV9SV HostSAV = new();
-        private DateTime StartTime = DateTime.Now;
+        private static readonly DateTime StartTime = DateTime.Now;
         public static RaidContainer? container;
         public static bool IsKitakami = false;
         public static bool IsBlueberry = false;
-        private DateTime TimeForRollBackCheck = DateTime.Now;
+        private static DateTime TimeForRollBackCheck = DateTime.Now;
         private string denHexSeed;
         private readonly bool indicesInitialized = false;
         private static readonly int KitakamiDensCount = 0;
         private static readonly int BlueberryDensCount = 0;
         private readonly int InvalidDeliveryGroupCount = 0;
+        private bool shouldRefreshMap = false;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -128,29 +130,18 @@ namespace SysBot.Pokemon.SV.BotRaid
         {
             await ReOpenGame(new PokeRaidHubConfig(), t).ConfigureAwait(false);
             await HardStop().ConfigureAwait(false);
-
             await Task.Delay(2_000, t).ConfigureAwait(false);
             if (!t.IsCancellationRequested)
             {
-                Log("Restarting the main loop.");
-                await MainLoop(t).ConfigureAwait(false);
+                Log("Restarting the inner loop.");
+                await InnerLoop(t).ConfigureAwait(false);
             }
         }
 
-        public override async Task RefreshMap(CancellationToken t)
+        public override Task RefreshMap(CancellationToken t)
         {
-            await HardStop().ConfigureAwait(false);
-            await Task.Delay(2_000, t).ConfigureAwait(false);
-
-            await CloseGame(Hub.Config, t).ConfigureAwait(false);
-            await AdvanceDaySV(t).ConfigureAwait(false);
-            await StartGame(Hub.Config, t).ConfigureAwait(false);
-
-            if (!t.IsCancellationRequested)
-            {
-                Log("Restarting the main loop.");
-                await MainLoop(t).ConfigureAwait(false);
-            }
+            shouldRefreshMap = true;
+            return Task.CompletedTask;
         }
 
         public class PlayerDataStorage
@@ -338,7 +329,6 @@ namespace SysBot.Pokemon.SV.BotRaid
         private async Task InnerLoop(CancellationToken token)
         {
             bool partyReady;
-            StartTime = DateTime.Now;
             RotationCount = 0;
             var raidsHosted = 0;
 
@@ -381,16 +371,16 @@ namespace SysBot.Pokemon.SV.BotRaid
                 await SwitchConnection.WriteBytesAbsoluteAsync(new byte[32], TeraNIDOffsets[0], token).ConfigureAwait(false);
 
                 // Connect online and enter den.
-                if (!await PrepareForRaid(token).ConfigureAwait(false))
+                int prepareResult = await PrepareForRaid(token).ConfigureAwait(false);
+                if (prepareResult == 2)
                 {
-                    if (firstRun)
-                    {
-                        Log("Seed Injected Successfully, restarting game to complete.");
-                    }
-                    else
-                    {
-                        Log("Failed to prepare the raid, rebooting the game.");
-                    }
+                    // Seed was injected, restart the loop
+                    continue;
+                }
+                else if (prepareResult == 0)
+                {
+                    // Preparation failed, reboot the game
+                    Log("Failed to prepare the raid, rebooting the game.");
                     await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                     continue;
                 }
@@ -531,62 +521,75 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task CompleteRaid(CancellationToken token)
         {
-            var trainers = new List<(ulong, RaidMyStatus)>();
-
-            // Ensure connection to lobby and log status
-            if (!await CheckIfConnectedToLobbyAndLog(token))
+            try
             {
-                await RebootReset(token);
-                return;
-            }
+                var trainers = new List<(ulong, RaidMyStatus)>();
 
-            // Ensure in raid
-            if (!await EnsureInRaid(token))
+                if (!await CheckIfConnectedToLobbyAndLog(token))
+                {
+                    throw new Exception("Not connected to lobby");
+                }
+
+                if (!await EnsureInRaid(token))
+                {
+                    throw new Exception("Not in raid");
+                }
+
+                var screenshotDelay = (int)Settings.EmbedToggles.ScreenshotTiming;
+                await Task.Delay(screenshotDelay, token).ConfigureAwait(false);
+
+                var lobbyTrainersFinal = new List<(ulong, RaidMyStatus)>();
+                if (!await UpdateLobbyTrainersFinal(lobbyTrainersFinal, trainers, token))
+                {
+                    throw new Exception("Failed to update lobby trainers");
+                }
+
+                if (!await HandleDuplicatesAndEmbeds(lobbyTrainersFinal, token))
+                {
+                    throw new Exception("Failed to handle duplicates and embeds");
+                }
+
+                await Task.Delay(10_000, token).ConfigureAwait(false);
+
+                if (!await ProcessBattleActions(token))
+                {
+                    throw new Exception("Failed to process battle actions");
+                }
+
+                bool isRaidCompleted = await HandleEndOfRaidActions(token);
+                if (!isRaidCompleted)
+                {
+                    throw new Exception("Raid not completed");
+                }
+
+                await FinalizeRaidCompletion(trainers, isRaidCompleted, token);
+            }
+            catch (Exception ex)
             {
-                await RebootReset(token);
-                return;
+                Log($"Error occurred during raid: {ex.Message}");
+                await PerformRebootAndReset(token);
             }
+        }
 
-            // Use the ScreenshotTiming setting for the delay before taking a screenshot in Raid
-            var screenshotDelay = (int)Settings.EmbedToggles.ScreenshotTiming;
-
-            // Use the delay in milliseconds as needed
-            await Task.Delay(screenshotDelay, token).ConfigureAwait(false);
-
-            var lobbyTrainersFinal = new List<(ulong, RaidMyStatus)>();
-            if (!await UpdateLobbyTrainersFinal(lobbyTrainersFinal, trainers, token))
+        private async Task PerformRebootAndReset(CancellationToken t)
+        {
+            EmbedBuilder embed = new()
             {
-                await RebootReset(token);
-                return;
-            }
+                Title = "Bot Reiniciando",
+                Description = "El bot encontró un problema y actualmente se está reiniciando. Por favor espere.",
+                Color = Color.Red,
+                ThumbnailUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/x.png"
+            };
+            EchoUtil.RaidEmbed(null, "", embed);
+            await ReOpenGame(new PokeRaidHubConfig(), t).ConfigureAwait(false);
+            await HardStop().ConfigureAwait(false);
+            await Task.Delay(2_000, t).ConfigureAwait(false);
 
-            // Handle duplicates and embeds first
-            if (!await HandleDuplicatesAndEmbeds(lobbyTrainersFinal, token))
+            if (!t.IsCancellationRequested)
             {
-                await RebootReset(token);
-                return;
+                Log("Restarting the inner loop.");
+                await InnerLoop(t).ConfigureAwait(false);
             }
-
-            // Delay to start ProcessBattleActions
-            await Task.Delay(10_000, token).ConfigureAwait(false);
-
-            // Process battle actions
-            if (!await ProcessBattleActions(token))
-            {
-                await RebootReset(token);
-                return;
-            }
-
-            // Handle end of raid actions
-            bool ready = await HandleEndOfRaidActions(token);
-            if (!ready)
-            {
-                await RebootReset(token);
-                return;
-            }
-
-            // Finalize raid completion
-            await FinalizeRaidCompletion(trainers, ready, token);
         }
 
         private async Task<bool> CheckIfConnectedToLobbyAndLog(CancellationToken token)
@@ -1539,8 +1542,39 @@ namespace SysBot.Pokemon.SV.BotRaid
             await SwitchConnection.WriteBytesAbsoluteAsync(pk.EncryptedBoxData, offset, token).ConfigureAwait(false);
         }
 
-        private async Task<bool> PrepareForRaid(CancellationToken token)
+        private async Task<int> PrepareForRaid(CancellationToken token)
         {
+            if (shouldRefreshMap)
+            {
+                Log("Starting Refresh map process...");
+                await HardStop().ConfigureAwait(false);
+                await Task.Delay(2_000, token).ConfigureAwait(false);
+                await Click(B, 3_000, token).ConfigureAwait(false);
+                await Click(B, 3_000, token).ConfigureAwait(false);
+                await GoHome(Hub.Config, token).ConfigureAwait(false);
+                await AdvanceDaySV(token).ConfigureAwait(false);
+                await SaveGame(Hub.Config, token).ConfigureAwait(false);
+                shouldRefreshMap = false;
+                if (!token.IsCancellationRequested)
+                {
+                    Log("Map Refresh Completed. Restarting the main loop...");
+                    await MainLoop(token).ConfigureAwait(false);
+                }
+            }
+
+            _ = Settings.ActiveRaids[RotationCount];
+            var currentSeed = Settings.ActiveRaids[RotationCount].Seed.ToUpper();
+
+            if (!denHexSeed.Equals(currentSeed, StringComparison.CurrentCultureIgnoreCase))
+            {
+                Log("Raid Den and Current Seed do not match. Injecting correct seed.");
+                await CloseGame(Hub.Config, token).ConfigureAwait(false);
+                await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
+
+                Log("Seed injected Successfully!");
+                return 2;
+            }
+
             if (Settings.ActiveRaids[RotationCount].AddedByRACommand)
             {
                 var user = Settings.ActiveRaids[RotationCount].User;
@@ -1577,25 +1611,10 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             if (!await ConnectToOnline(Hub.Config, token))
             {
-                return false;
+                return 0;
             }
 
             await Task.Delay(0_500, token).ConfigureAwait(false);
-            await Click(HOME, 0_500, token).ConfigureAwait(false);
-            await Click(HOME, 0_500, token).ConfigureAwait(false);
-            _ = Settings.ActiveRaids[RotationCount];
-
-            var currentSeed = Settings.ActiveRaids[RotationCount].Seed.ToUpper();
-            if (denHexSeed.ToUpper() != currentSeed)
-            {
-                Log("Raid Den and Current Seed do not match.  Restarting to inject correct seed.");
-                await CloseGame(Hub.Config, token).ConfigureAwait(false);
-                await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
-                await SaveGame(Hub.Config, token).ConfigureAwait(false);
-                Log("Saved the game.");
-                return false;
-            }
-
             var len = string.Empty;
             foreach (var l in Settings.ActiveRaids[RotationCount].PartyPK)
                 len += l;
@@ -1630,7 +1649,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             await Task.Delay(1_500, token).ConfigureAwait(false);
 
             if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                return false;
+                return 0;
 
             await Click(A, 3_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
@@ -1647,7 +1666,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
 
             await Click(A, 8_000, token).ConfigureAwait(false);
-            return true;
+            return 1;
         }
 
         private async Task RollBackHour(CancellationToken token)
@@ -2351,6 +2370,34 @@ namespace SysBot.Pokemon.SV.BotRaid
             EchoUtil.RaidEmbed(bytes, fileName, embed);
         }
 
+        private async Task<bool> ReconnectToOnlineAfterSeedInjection(CancellationToken token)
+        {
+            int attemptCount = 0;
+            const int maxAttempt = 5;
+
+            while (attemptCount < maxAttempt)
+            {
+                if (await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+                {
+                    Log("Reconnected to online successfully after seed injection.");
+                    return true;
+                }
+
+                attemptCount++;
+                Log($"Attempt {attemptCount} of {maxAttempt}: Trying to reconnect online after seed injection...");
+
+                // Connection attempt logic
+                await Click(X, 3_000, token).ConfigureAwait(false);
+                await Click(L, 5_000 + Hub.Config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+
+                // Wait a bit before rechecking the connection status
+                await Task.Delay(5000, token).ConfigureAwait(false);
+            }
+
+            Log($"Failed to reconnect to online after {maxAttempt} attempts.");
+            return false;
+        }
+
         private async Task<bool> ConnectToOnline(PokeRaidHubConfig config, CancellationToken token)
         {
             int attemptCount = 0;
@@ -2578,7 +2625,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             LostRaid = 0;
 
-            if (Settings.RaidSettings.MysteryRaids && !firstRun)
+            if (Settings.RaidSettings.MysteryRaids)
             {
                 // Count the number of existing Mystery Shiny Raids
                 int mysteryRaidCount = Settings.ActiveRaids.Count(raid => raid.Title.Contains("✨ Incursion Shiny Misteriosa ✨"));
@@ -3526,11 +3573,11 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task<bool> SaveGame(PokeRaidHubConfig config, CancellationToken token)
         {
+            Log("Saving the Game.");
+            await Click(B, 3_000, token).ConfigureAwait(false);
+            await Click(B, 3_000, token).ConfigureAwait(false);
             await Click(X, 3_000, token).ConfigureAwait(false);
-            await Click(R, 3_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
-            await Click(A, 3_000, token).ConfigureAwait(false);
-            await Click(A, 1_000, token).ConfigureAwait(false);
-            await Click(B, 1_000, token).ConfigureAwait(false);
+            await Click(L, 5_000 + Hub.Config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
             return true;
         }
     }
