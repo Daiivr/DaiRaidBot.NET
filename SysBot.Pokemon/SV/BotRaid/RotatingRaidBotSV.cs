@@ -1,6 +1,5 @@
 using Discord;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PKHeX.Core;
 using RaidCrawler.Core.Structures;
 using SysBot.Base;
@@ -13,6 +12,8 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using AnimatedGif;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
@@ -73,6 +74,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         public static bool IsBlueberry = false;
         private static DateTime TimeForRollBackCheck = DateTime.Now;
         private string denHexSeed;
+        private int seedMismatchCount = 0;
         private readonly bool indicesInitialized = false;
         private static readonly int KitakamiDensCount = 0;
         private static readonly int BlueberryDensCount = 0;
@@ -577,7 +579,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 Title = "Bot Reiniciando",
                 Description = "El bot encontró un problema y actualmente se está reiniciando. Por favor espere.",
-                Color = Color.Red,
+                Color = Discord.Color.Red,
                 ThumbnailUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/x.png"
             };
             EchoUtil.RaidEmbed(null, "", embed);
@@ -1567,12 +1569,26 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             if (!denHexSeed.Equals(currentSeed, StringComparison.CurrentCultureIgnoreCase))
             {
-                Log("Raid Den and Current Seed do not match. Injecting correct seed.");
+                seedMismatchCount++;
+                Log($"Raid Den and Current Seed do not match. Mismatch count: {seedMismatchCount}");
+
+                if (seedMismatchCount >= 2)
+                {
+                    Log("Seeds have mismatched 2 times in a row. Refreshing the map.");
+                    shouldRefreshMap = true;
+                    seedMismatchCount = 0;
+                    return 2;
+                }
+
+                Log("Injecting correct seed.");
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
                 await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
-
                 Log("Seed injected Successfully!");
                 return 2;
+            }
+            else
+            {
+                seedMismatchCount = 0;
             }
 
             if (Settings.ActiveRaids[RotationCount].AddedByRACommand)
@@ -2116,6 +2132,58 @@ namespace SysBot.Pokemon.SV.BotRaid
             return "Unknown Type";  // Return "Unknown Type" if the type doesn't exist in our dictionary
         }
 
+        private async Task<byte[]?> CaptureGifScreenshotsAsync(CancellationToken token)
+        {
+            var screenshotCount = 20;
+            var screenshotInterval = TimeSpan.FromSeconds(0 / 20);
+            var gifFrames = new List<System.Drawing.Image>();
+
+            for (int i = 0; i < screenshotCount; i++)
+            {
+                byte[] bytes;
+                try
+                {
+                    bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error while fetching pixels: {ex.Message}");
+                    return null;
+                }
+
+                if (bytes.Length == 0)
+                {
+                    Log("No screenshot data received.");
+                    return null;
+                }
+
+                using (var ms = new MemoryStream(bytes))
+                {
+                    using (var bitmap = new Bitmap(ms))
+                    {
+                        var frame = bitmap.Clone(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                        gifFrames.Add(frame);
+                    }
+                }
+
+                await Task.Delay(screenshotInterval, token).ConfigureAwait(false);
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var gif = new AnimatedGifCreator(ms, 220))
+                {
+                    foreach (var frame in gifFrames)
+                    {
+                        gif.AddFrame(frame);
+                        frame.Dispose();
+                    }
+                }
+
+                return ms.ToArray();
+            }
+        }
+
         private async Task EnqueueEmbed(List<string>? names, string message, bool hatTrick, bool disband, bool upnext, bool raidstart, CancellationToken token)
         {
             string code = string.Empty;
@@ -2151,16 +2219,52 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (disband) // Wait for trainer to load before disband
                 await Task.Delay(5_000, token).ConfigureAwait(false);
 
-            byte[]? bytes = [];
-            if (Settings.EmbedToggles.TakeScreenshot && !upnext)
+            byte[]? imageBytes = null;
+            string fileName = string.Empty;
+
+            if (!disband && names is not null && !upnext && Settings.EmbedToggles.TakeScreenshot)
+            {
                 try
                 {
-                    bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? [];
+                    if (Settings.EmbedToggles.AnimatedScreenshot)
+                    {
+                        try
+                        {
+                            imageBytes = await Task.Run(() => CaptureGifScreenshotsAsync(token)).ConfigureAwait(false);
+                            fileName = $"raidecho{RotationCount}.gif";
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Error while capturing GIF screenshots: {ex.Message}");
+                            Log("Falling back to standard JPG screenshot.");
+
+                            imageBytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
+                            fileName = $"raidecho{RotationCount}.jpg";
+                        }
+                    }
+                    else
+                    {
+                        imageBytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
+                        fileName = $"raidecho{RotationCount}.jpg";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error while capturing screenshots: {ex.Message}");
+                }
+            }
+            else if (Settings.EmbedToggles.TakeScreenshot && !upnext)
+            {
+                try
+                {
+                    imageBytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
+                    fileName = $"raidecho{RotationCount}.jpg";
                 }
                 catch (Exception ex)
                 {
                     Log($"Error while fetching pixels: {ex.Message}");
                 }
+            }
 
             string disclaimer = Settings.ActiveRaids.Count > 1
                                 ? Settings.EmbedToggles.CustomRaidRotationMessage
@@ -2222,7 +2326,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             (int R, int G, int B) dominantColor = RaidExtensions<PK9>.GetDominantColor(turl);
 
             // Use the dominant color, unless it's a disband or hatTrick situation
-            var embedColor = disband ? Color.Red : hatTrick ? Color.Purple : new Color(dominantColor.R, dominantColor.G, dominantColor.B);
+            var embedColor = disband ? Discord.Color.Red : hatTrick ? Discord.Color.Purple : new Discord.Color(dominantColor.R, dominantColor.G, dominantColor.B);
 
             TimeSpan duration = new(0, 2, 31);
 
@@ -2241,7 +2345,8 @@ namespace SysBot.Pokemon.SV.BotRaid
                 Title = disband ? $"**Incursión cancelada: [{TeraRaidCode}]**" : upnext && Settings.RaidSettings.TotalRaidsToHost != 0 ? $"Incursión finalizada - Preparando la siguiente!" : upnext && Settings.RaidSettings.TotalRaidsToHost == 0 ? $"Incursión finalizada - Preparando la siguiente!" : "",
                 Color = embedColor,
                 Description = disband ? message : upnext ? Settings.RaidSettings.TotalRaidsToHost == 0 ? $"# {Settings.ActiveRaids[RotationCount].Title}\n\n{futureTimeMessage}" : $"# {Settings.ActiveRaids[RotationCount].Title}\n\n{futureTimeMessage}" : raidstart ? "" : description,
-                ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
+                ThumbnailUrl = upnext ? turl : (imageBytes == null ? turl : null), // Set ThumbnailUrl based on upnext and imageBytes
+                ImageUrl = imageBytes != null ? $"attachment://{fileName}" : null, // Set ImageUrl based on imageBytes
             };
 
             // Only include footer if not posting 'upnext' embed with the 'Preparing Raid' title
@@ -2364,38 +2469,13 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 embed.AddField($"**¡La incursión #{RaidCount} está comenzando!**", players);
             }
-            var fileName = $"raidecho{RotationCount}.jpg";
-            embed.ThumbnailUrl = turl;
-            embed.WithImageUrl($"attachment://{fileName}");
-            EchoUtil.RaidEmbed(bytes, fileName, embed);
-        }
-
-        private async Task<bool> ReconnectToOnlineAfterSeedInjection(CancellationToken token)
-        {
-            int attemptCount = 0;
-            const int maxAttempt = 5;
-
-            while (attemptCount < maxAttempt)
+            if (imageBytes != null)
             {
-                if (await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
-                {
-                    Log("Reconnected to online successfully after seed injection.");
-                    return true;
-                }
-
-                attemptCount++;
-                Log($"Attempt {attemptCount} of {maxAttempt}: Trying to reconnect online after seed injection...");
-
-                // Connection attempt logic
-                await Click(X, 3_000, token).ConfigureAwait(false);
-                await Click(L, 5_000 + Hub.Config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
-
-                // Wait a bit before rechecking the connection status
-                await Task.Delay(5000, token).ConfigureAwait(false);
+                embed.ThumbnailUrl = turl;
+                embed.WithImageUrl($"attachment://{fileName}");
             }
 
-            Log($"Failed to reconnect to online after {maxAttempt} attempts.");
-            return false;
+            EchoUtil.RaidEmbed(imageBytes, fileName, embed);
         }
 
         private async Task<bool> ConnectToOnline(PokeRaidHubConfig config, CancellationToken token)
@@ -2428,7 +2508,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                         {
                             Title = "Experimentando dificultades técnicas",
                             Description = "El bot tiene problemas para conectarse en línea. Espere mientras intentamos resolver el problema.",
-                            Color = Color.Red,
+                            Color = Discord.Color.Red,
                             ThumbnailUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/x.png"
                         };
                         EchoUtil.RaidEmbed(null, "", embed);
@@ -3210,24 +3290,19 @@ namespace SysBot.Pokemon.SV.BotRaid
                     }
                     if (seed == set)
                     {
-                        var useTypeEmojis = Settings.EmbedToggles.MoveTypeEmojis;
-                        var typeEmojis = Settings.EmbedToggles.CustomTypeEmojis
-                            .Where(e => !string.IsNullOrEmpty(e.EmojiCode))
-                            .ToDictionary(
-                                e => e.MoveType,
-                                e => $"{e.EmojiCode}"
-                            );
-                        var res = GetSpecialRewards(allRewards[i], Settings.EmbedToggles.RewardsToShow);
-                        RaidEmbedInfoHelpers.SpecialRewards = res;
-                        if (string.IsNullOrEmpty(res))
-                            res = string.Empty;
-                        else
-                            res = "**Recompensas Especiales:**\n" + res;
+                        // Species and Form
+                        RaidEmbedInfoHelpers.RaidSpecies = (Species)allEncounters[i].Species;
+                        RaidEmbedInfoHelpers.RaidSpeciesForm = allEncounters[i].Form;
 
+                        // Update Species and SpeciesForm in ActiveRaids
+                        if (!Settings.ActiveRaids[a].ForceSpecificSpecies)
+                        {
+                            Settings.ActiveRaids[a].Species = (Species)allEncounters[i].Species;
+                            Settings.ActiveRaids[a].SpeciesForm = allEncounters[i].Form;
+                        }
+
+                        // Encounter Info
                         int raid_delivery_group_id = Settings.ActiveRaids[a].GroupID;
-                        var areaText = $"{Areas.GetArea((int)(allRaids[i].Area - 1), allRaids[i].MapParent)} - Den {allRaids[i].Den}";
-                        Log($"Seed {seed:X8} found for {(Species)allEncounters[i].Species} in {areaText}");
-                        var stars = allRaids[i].IsEvent ? allEncounters[i].Stars : allRaids[i].GetStarCount(allRaids[i].Difficulty, StoryProgress, allRaids[i].IsBlack);
                         var encounter = allRaids[i].GetTeraEncounter(container, allRaids[i].IsEvent ? 3 : StoryProgress, raid_delivery_group_id);
                         if (encounter != null)
                         {
@@ -3237,18 +3312,61 @@ namespace SysBot.Pokemon.SV.BotRaid
                         {
                             RaidEmbedInfoHelpers.RaidLevel = 75;
                         }
+
+                        // Translations
+                        string abilityName = ((Ability)pk.Ability).ToString();
+                        string translatedAbilityName = AbilityTranslationDictionary.AbilityTranslation.TryGetValue(abilityName, out var translation) ? translation : abilityName;
+                        string natureName = GameInfo.Strings.Natures[(int)pk.Nature];
+                        bool areAllIVsMax = pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31;
+
+                        // Star Rating
+                        var stars = allRaids[i].IsEvent ? allEncounters[i].Stars : allRaids[i].GetStarCount(allRaids[i].Difficulty, StoryProgress, allRaids[i].IsBlack);
+
+                        // Raid Title
                         var pkinfo = RaidExtensions<PK9>.GetRaidPrintName(pk);
+                        var titlePrefix = allRaids[i].IsShiny ? "Shiny" : "";
+                        RaidEmbedInfoHelpers.RaidEmbedTitle = $"{stars} ★ {titlePrefix} {(Species)allEncounters[i].Species}{pkinfo}";
+
+                        // Gender
+                        var maleEmoji = Settings.EmbedToggles.MaleEmoji.EmojiString;
+                        var femaleEmoji = Settings.EmbedToggles.FemaleEmoji.EmojiString;
+                        RaidEmbedInfoHelpers.RaidSpeciesGender = pk.Gender switch
+                        {
+                            0 when !string.IsNullOrEmpty(maleEmoji) => $"{maleEmoji} Macho",
+                            1 when !string.IsNullOrEmpty(femaleEmoji) => $"{femaleEmoji} Hembra",
+                            _ => pk.Gender == 0 ? "Macho" : pk.Gender == 1 ? "Hembra" : "Sin género"
+                        };
+
+                        // Nature
+                        RaidEmbedInfoHelpers.RaidSpeciesNature = TraduccionesNaturalezas.ContainsKey(natureName) ? TraduccionesNaturalezas[natureName] : natureName;
+
+                        // Ability
+                        RaidEmbedInfoHelpers.RaidSpeciesAbility = translatedAbilityName;
+
+                        // IVs
+                        RaidEmbedInfoHelpers.RaidSpeciesIVs = areAllIVsMax ? "Máximos" : $"{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
+
+                        // Tera Type
+                        RaidEmbedInfoHelpers.RaidSpeciesTeraType = $"{(MoveType)allRaids[i].GetTeraType(encounter)}";
+
+                        // Moves
                         var strings = GameInfo.GetStrings(1);
                         var moves = new ushort[4] { allEncounters[i].Move1, allEncounters[i].Move2, allEncounters[i].Move3, allEncounters[i].Move4 };
-
                         var moveNames = new List<string>();
+                        var useTypeEmojis = Settings.EmbedToggles.MoveTypeEmojis;
+                        var typeEmojis = Settings.EmbedToggles.CustomTypeEmojis
+                           .Where(e => !string.IsNullOrEmpty(e.EmojiCode))
+                           .ToDictionary(
+                               e => e.MoveType,
+                               e => $"{e.EmojiCode}"
+                           );
                         for (int j = 0; j < moves.Length; j++)
                         {
                             if (moves[j] != 0)
                             {
                                 string moveName = strings.Move[moves[j]];
                                 string translatedMoveName = MovesTranslation.ContainsKey(moveName) ? MovesTranslation[moveName] : moveName;
-                                byte moveTypeId = MoveInfo.GetType(moves[j], (EntityContext)pk.Context);
+                                byte moveTypeId = MoveInfo.GetType(moves[j], pk.Context);
                                 MoveType moveType = (MoveType)moveTypeId;
 
                                 if (useTypeEmojis && typeEmojis.TryGetValue(moveType, out var moveEmoji))
@@ -3263,6 +3381,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                         }
                         RaidEmbedInfoHelpers.Moves = string.Join("\n", moveNames);
 
+                        // Extra Moves
                         var extraMoveNames = new List<string>();
                         if (allEncounters[i].ExtraMoves.Length != 0)
                         {
@@ -3272,7 +3391,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                                 {
                                     string moveName = strings.Move[allEncounters[i].ExtraMoves[j]];
                                     string translatedMoveName = MovesTranslation.ContainsKey(moveName) ? MovesTranslation[moveName] : moveName;
-                                    byte moveTypeId = MoveInfo.GetType(allEncounters[i].ExtraMoves[j], (EntityContext)pk.Context);
+                                    byte moveTypeId = MoveInfo.GetType(allEncounters[i].ExtraMoves[j], pk.Context);
                                     MoveType moveType = (MoveType)moveTypeId;
 
                                     if (useTypeEmojis && typeEmojis.TryGetValue(moveType, out var moveEmoji))
@@ -3287,29 +3406,21 @@ namespace SysBot.Pokemon.SV.BotRaid
                             }
                             RaidEmbedInfoHelpers.ExtraMoves = string.Join("\n", extraMoveNames);
                         }
-                        string abilityName = ((Ability)pk.Ability).ToString();
-                        string translatedAbilityName = AbilityTranslationDictionary.AbilityTranslation.TryGetValue(abilityName, out var translation) ? translation : abilityName;
-                        string natureName = GameInfo.Strings.Natures[(int)pk.Nature];
-                        bool areAllIVsMax = pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31;
-                        var maleEmoji = Settings.EmbedToggles.MaleEmoji.EmojiString;
-                        var femaleEmoji = Settings.EmbedToggles.FemaleEmoji.EmojiString;
-                        var titlePrefix = allRaids[i].IsShiny ? "Shiny" : "";
-                        RaidEmbedInfoHelpers.RaidSpecies = (Species)allEncounters[i].Species;
-                        RaidEmbedInfoHelpers.RaidSpeciesForm = allEncounters[i].Form;
-                        RaidEmbedInfoHelpers.RaidEmbedTitle = $"{stars} ★ {titlePrefix} {(Species)allEncounters[i].Species}{pkinfo}";
-                        RaidEmbedInfoHelpers.RaidSpeciesGender = pk.Gender switch
-                        {
-                            0 when !string.IsNullOrEmpty(maleEmoji) => $"{maleEmoji} Macho",
-                            1 when !string.IsNullOrEmpty(femaleEmoji) => $"{femaleEmoji} Hembra",
-                            _ => pk.Gender == 0 ? "Macho" : pk.Gender == 1 ? "Hembra" : "Sin género"
-                        };
-                        RaidEmbedInfoHelpers.RaidSpeciesNature = TraduccionesNaturalezas.ContainsKey(natureName) ? TraduccionesNaturalezas[natureName] : natureName;
-                        RaidEmbedInfoHelpers.RaidSpeciesAbility = translatedAbilityName;
-                        RaidEmbedInfoHelpers.RaidSpeciesIVs = areAllIVsMax ? "Máximos" : $"{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
-                        RaidEmbedInfoHelpers.RaidSpeciesTeraType = $"{(MoveType)allRaids[i].GetTeraType(encounter)}";
+                        // Scale Text and Number
                         RaidEmbedInfoHelpers.ScaleText = $"{PokeSizeDetailedUtil.GetSizeRating(pk.Scale)}";
-                        RaidEmbedInfoHelpers.ScaleNumber = pk.Scale;                        
-                        // Update Species and SpeciesForm in ActiveRaids
+                        RaidEmbedInfoHelpers.ScaleNumber = pk.Scale;
+
+                        // Special Rewards
+                        var res = GetSpecialRewards(allRewards[i], Settings.EmbedToggles.RewardsToShow);
+                        RaidEmbedInfoHelpers.SpecialRewards = res;
+                        if (string.IsNullOrEmpty(res))
+                            res = string.Empty;
+                        else
+                            res = "**Recompensas Especiales:**\n" + res;
+
+                        // Area Text
+                        var areaText = $"{Areas.GetArea((int)(allRaids[i].Area - 1), allRaids[i].MapParent)} - Den {allRaids[i].Den}";
+                        Log($"Seed {seed:X8} found for {(Species)allEncounters[i].Species} in {areaText}");
 
                         if (!Settings.ActiveRaids[a].ForceSpecificSpecies)
                         {
@@ -3426,7 +3537,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 {
                     string moveName = strings.Move[pk.Moves[i]];
                     string translatedMoveName = MovesTranslation.ContainsKey(moveName) ? MovesTranslation[moveName] : moveName;
-                    byte moveTypeId = MoveInfo.GetType(pk.Moves[i], (EntityContext)pk.Context);
+                    byte moveTypeId = MoveInfo.GetType(pk.Moves[i], pk.Context);
                     MoveType moveType = (MoveType)moveTypeId;
 
                     if (useTypeEmojis && typeEmojis.TryGetValue(moveType, out var moveEmoji))
@@ -3508,7 +3619,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             var authorName = $"{stars} ★ {titlePrefix}{(Species)encounter.Species}{(pk.Form != 0 ? $"-{formName}" : "")}{(isEvent ? " (Event Raid)" : "")}";
 
             (int R, int G, int B) = RaidExtensions<PK9>.GetDominantColor(RaidExtensions<PK9>.PokeImg(pk, false, false));
-            var embedColor = new Color(R, G, B);
+            var embedColor = new Discord.Color(R, G, B);
 
             var embed = new EmbedBuilder
             {
