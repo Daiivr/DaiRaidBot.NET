@@ -50,7 +50,9 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var compatible = CheckProgressandLevel(level, storyProgressLevel);
             if (!compatible)
             {
-                await ReplyAsync($"<a:warning:1206483664939126795> La dificultad de la incursión requiere un {GetRequiredProgress(level)}.").ConfigureAwait(false);
+                string requiredProgress = GetRequiredProgress(level);
+                await ReplyAsync($"<a:warning:1206483664939126795> El nivel de dificultad de incursión seleccionado ({level}★) no es compatible con tu progreso actual en la historia. " +
+                                 $"Para acceder a las incursiones de {level}★, necesitas tener al menos {requiredProgress} en la historia del juego.").ConfigureAwait(false);
                 return;
             }
 
@@ -400,7 +402,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 PartyPK = new[] { "" },
                 Species = (Species)pk.Species,
                 SpeciesForm = pk.Form,
-                StoryProgressLevel = (int)gameProgress,
+                StoryProgress = (GameProgressEnum)gameProgress,
                 Seed = seed,
                 IsCoded = true,
                 IsShiny = pk.IsShiny,
@@ -442,7 +444,9 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             var compatible = CheckProgressandLevel(level, storyProgressLevel);
             if (!compatible)
             {
-                await ReplyAsync($"<a:warning:1206483664939126795> La dificultad de la incursión requiere un {GetRequiredProgress(level)}.").ConfigureAwait(false);
+                string requiredProgress = GetRequiredProgress(level);
+                await ReplyAsync($"El nivel de dificultad de incursión seleccionado ({level}★) no es compatible con tu progreso actual en la historia. " +
+                                 $"Para acceder a las incursiones de {level}★, necesitas tener al menos {requiredProgress} en la historia del juego.").ConfigureAwait(false);
                 return;
             }
 
@@ -587,7 +591,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 Species = (Species)pk.Species,
                 DifficultyLevel = level,
                 SpeciesForm = pk.Form,
-                StoryProgressLevel = (int)gameProgress,
+                StoryProgress = (GameProgressEnum)gameProgress,
                 Seed = seed,
                 IsCoded = true,
                 IsShiny = pk.IsShiny,
