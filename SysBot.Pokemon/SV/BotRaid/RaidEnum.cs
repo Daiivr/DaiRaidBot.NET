@@ -86,11 +86,26 @@ namespace SysBot.Pokemon
 
     public enum ScreenshotTimingOptions
     {
-        [Description("1500 milliseconds")]
-        _1500 = 1500, // Team SS
+        [Description("0 milliseconds")]
+        _0 = 0, // No delay
 
-        [Description("9000 milliseconds")]
-        _9000 = 9000 // Everything SS
+        [Description("3500 milliseconds")]
+        _3500 = 3500, // Team SS
+
+        [Description("8000 milliseconds")]
+        _10000 = 10000 // Everything SS
+    }
+
+    public enum GifQuality
+    {
+        [Description("Default quality")]
+        Default,
+        [Description("8-bit color quality")]
+        Bit8,
+        [Description("4-bit color quality")]
+        Bit4,
+        [Description("Grayscale quality")]
+        Grayscale
     }
 
     public enum GenderDependent : ushort
