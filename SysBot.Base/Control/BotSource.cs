@@ -81,7 +81,6 @@ namespace SysBot.Base
         {
             if (IsStopping)
                 return;
-
             Task.Run(() => Bot.RefreshMapAsync(Source.Token)
                 .ContinueWith(ReportFailure, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously));
         }

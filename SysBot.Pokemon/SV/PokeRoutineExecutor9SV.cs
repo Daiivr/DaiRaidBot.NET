@@ -53,14 +53,14 @@ namespace SysBot.Pokemon.SV
             string title = await SwitchConnection.GetTitleID(token).ConfigureAwait(false);
             if (title is not (ScarletID or VioletID))
             {
-                throw new Exception($"{title} is not a valid SV title. Is your mode correct?");
+                throw new Exception($"{title} no es un título SV válido. ¿Es correcto su modo?");
             }
 
             // Verify the game version.
             string game_version = await SwitchConnection.GetGameInfo("version", token).ConfigureAwait(false);
             if (!game_version.SequenceEqual(SVGameVersion))
             {
-                throw new Exception($"Game version is not supported. Expected version {SVGameVersion}, and current game version is {game_version}.");
+                throw new Exception($"No se admite la versión del juego. Versión esperada {SVGameVersion}, y la versión actual del juego es {game_version}.");
             }
 
             SAV9SV sav = await GetFakeTrainerSAV(token).ConfigureAwait(false);
@@ -69,11 +69,11 @@ namespace SysBot.Pokemon.SV
             if (!IsValidTrainerData())
             {
                 await CheckForRAMShiftingApps(token).ConfigureAwait(false);
-                throw new Exception("Refer to the SysBot.NET wiki (https://github.com/kwsch/SysBot.NET/wiki/Troubleshooting) for more information.");
+                throw new Exception("Consulte la wiki de SysBot.NET (https://github.com/kwsch/SysBot.NET/wiki/Troubleshooting) para obtener más información.");
             }
 
             return await GetTextSpeed(token).ConfigureAwait(false) < TextSpeedOption.Fast
-                ? throw new Exception("Text speed should be set to FAST. Fix this for correct operation.")
+                ? throw new Exception("La velocidad del texto debe establecerse en RÁPIDO. Arregle esto para un funcionamiento correcto.")
                 : sav;
         }
 
@@ -96,11 +96,11 @@ namespace SysBot.Pokemon.SV
 
         public async Task InitializeHardware(IBotStateSettings settings, CancellationToken token)
         {
-            Log("Detaching on startup.");
+            Log("Desconectando al iniciar");
             await DetachController(token).ConfigureAwait(false);
             if (settings.ScreenOff)
             {
-                Log("Turning off screen.");
+                Log("Apagando la pantalla");
                 await SetScreen(ScreenState.Off, token).ConfigureAwait(false);
             }
         }
@@ -108,7 +108,7 @@ namespace SysBot.Pokemon.SV
         public async Task CleanExit(CancellationToken token)
         {
             await SetScreen(ScreenState.On, token).ConfigureAwait(false);
-            Log("Detaching controllers on routine exit.");
+            Log("Desconectando los controladores al salir de rutina");
             await DetachController(token).ConfigureAwait(false);
         }
 
@@ -124,7 +124,7 @@ namespace SysBot.Pokemon.SV
             // Close out of the game
             await Click(B, 0_500, token).ConfigureAwait(false);
             await Click(HOME, 2_000 + timing.ExtraTimeReturnHome, token).ConfigureAwait(false);
-            Log("Went to Home Screen");
+            Log("Fui a la pantalla de inicio");
         }
 
         public async Task CloseGame(PokeRaidHubConfig config, CancellationToken token)
@@ -135,7 +135,7 @@ namespace SysBot.Pokemon.SV
             await Click(HOME, 2_000 + timing.ExtraTimeReturnHome, token).ConfigureAwait(false);
             await Click(X, 1_000, token).ConfigureAwait(false);
             await Click(A, 5_000 + timing.RestartGameSettings.ExtraTimeCloseGame, token).ConfigureAwait(false);
-            Log("Closed out of the game!");
+            Log("¡Salí del juego!");
         }
 
         public async Task StartGame(PokeRaidHubConfig config, CancellationToken token)
@@ -174,7 +174,7 @@ namespace SysBot.Pokemon.SV
                 await Click(A, 0_600, token).ConfigureAwait(false);
             }
 
-            Log("Restarting the game!");
+            Log("¡Reiniciando el juego!");
 
             // Switch Logo and game load screen
             await Task.Delay(15_000 + timing.RestartGameSettings.ExtraTimeLoadGame, token).ConfigureAwait(false);
@@ -193,7 +193,7 @@ namespace SysBot.Pokemon.SV
                 // Don't risk it if hub is set to avoid updates.
                 if (timer <= 0 && !timing.RestartGameSettings.AvoidSystemUpdate)
                 {
-                    Log("Still not in the game, initiating rescue protocol!");
+                    Log("Todavía no estoy en el juego, ¡iniciando el protocolo de rescate!");
                     while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
                     {
                         await Click(A, 6_000, token).ConfigureAwait(false);
@@ -204,7 +204,7 @@ namespace SysBot.Pokemon.SV
             }
 
             await Task.Delay(5_000 + timing.ExtraTimeLoadOverworld, token).ConfigureAwait(false);
-            Log("Back in the overworld!");
+            Log("¡De vuelta en el mundo exterior!");
         }
 
         public async Task<bool> IsConnectedOnline(ulong offset, CancellationToken token)
@@ -235,7 +235,7 @@ namespace SysBot.Pokemon.SV
         //Zyro additions
         public async Task SVSaveGameOverworld(CancellationToken token)
         {
-            Log("Saving the game...");
+            Log("Guardando el juego...");
             await Click(X, 2_000, token).ConfigureAwait(false);
             await Click(R, 1_800, token).ConfigureAwait(false);
             await Click(A, 1_000, token).ConfigureAwait(false);
@@ -594,12 +594,12 @@ namespace SysBot.Pokemon.SV
                 scaleNumber = pkl.Scale.ToString();
                 if (pkl.Scale == 0)
                 {
-                    markEntryText = "The Teeny";
+                    markEntryText = "el Diminuto";
                     markTitle = "Teeny";
                 }
                 if (pkl.Scale == 255)
                 {
-                    markEntryText = "The Great";
+                    markEntryText = "el Gigante";
                     markTitle = "Jumbo";
                 }
             }
@@ -641,7 +641,7 @@ namespace SysBot.Pokemon.SV
     SCTypeCode.Byte or SCTypeCode.SByte => await WriteEncryptedBlockByte(block, (byte)toExpect, (byte)toWrite, token).ConfigureAwait(false),
     SCTypeCode.UInt32 => await WriteEncryptedBlockUint(block, (uint)toExpect, (uint)toWrite, token).ConfigureAwait(false),
     SCTypeCode.Int32 => await WriteEncryptedBlockInt32(block, (int)toExpect, (int)toWrite, token).ConfigureAwait(false),
-    _ => throw new NotSupportedException($"Block {block.Name} (Type {block.Type}) is currently not supported.")
+    _ => throw new NotSupportedException($"Bloque {block.Name} (Type {block.Type})  no se admite actualmente.")
 };
         }
 
@@ -649,7 +649,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             //Always read and decrypt first to validate address and data
@@ -676,7 +676,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             byte[] data = await SwitchConnection.PointerPeek(block.Size, block.Pointer!, token).ConfigureAwait(false);
@@ -689,8 +689,8 @@ namespace SysBot.Pokemon.SV
 
             if (block.Pointer == null)
             {
-                Log("Block pointer is null. Aborting operation.");
-                throw new ArgumentNullException(nameof(block.Pointer), "Block pointer cannot be null.");
+                Log("El puntero de bloque es nulo Abortando la operación");
+                throw new ArgumentNullException(nameof(block.Pointer), "El puntero de bloque no puede ser nulo.");
             }
 
             if (KeyBlockAddress == 0)
@@ -701,8 +701,8 @@ namespace SysBot.Pokemon.SV
             byte[] keyblock = await SwitchConnection.ReadBytesAbsoluteAsync(KeyBlockAddress, 16, token).ConfigureAwait(false);
             if (keyblock == null || keyblock.Length < 16)
             {
-                Log("Failed to read keyblock or keyblock is too short.");
-                throw new InvalidOperationException("Failed to read keyblock.");
+                Log("No pude leer el bloque de clave o el bloque de clave es demasiado corto");
+                throw new InvalidOperationException("No pude leer el bloque de clave");
             }
 
             ulong start = BitConverter.ToUInt64(keyblock.AsSpan()[..8]);
@@ -717,7 +717,7 @@ namespace SysBot.Pokemon.SV
                 byte[] data = await SwitchConnection.ReadBytesAbsoluteAsync(mid, 4, token).ConfigureAwait(false);
                 if (data == null || data.Length < 4)
                 {
-                    Log("Failed to read data or data is too short.");
+                    Log("No pude leer los datos o los datos son demasiado cortos");
                     continue; // or break, depending on your error handling strategy
                 }
 
@@ -742,8 +742,8 @@ namespace SysBot.Pokemon.SV
                 }
             }
 
-            Log("Block key not found within the specified range.");
-            throw new ArgumentOutOfRangeException(nameof(block), "Block key not found.");
+            Log("No se encontró la clave de bloque dentro del rango especificado");
+            throw new ArgumentOutOfRangeException(nameof(block), "Clave de bloque no encontrada.");
         }
 
         private async Task<ulong> PrepareAddress(ulong address, CancellationToken token)
@@ -755,7 +755,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             //Always read and decrypt first to validate address and data
@@ -782,7 +782,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             ulong address = await GetBlockAddress(block, token).ConfigureAwait(false);
@@ -799,43 +799,43 @@ namespace SysBot.Pokemon.SV
 
         public async Task<bool> WriteEncryptedBlockSByte(DataBlock block, sbyte valueToExpect, sbyte valueToInject, CancellationToken token)
         {
-            Log("Starting WriteEncryptedBlockSByte method.");
+            Log("Iniciando el método WriteEncryptedBlockSByte.");
 
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                Log("No remote connection. Aborting write operation.");
-                throw new InvalidOperationException("No remote connection");
+                Log("No hay conexión remota. Abortando operación de escritura.");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             ulong address;
             try
             {
                 address = await GetBlockAddress(block, token).ConfigureAwait(false);
-                Log($"Block address obtained: {address}");
+                Log($"Dirección de bloque obtenida: {address}");
             }
             catch (Exception ex)
             {
-                Log($"Exception in getting block address: {ex.Message}");
+                Log($"Excepción al obtener la dirección de bloque: {ex.Message}");
                 return false;
             }
 
             byte[] header = await SwitchConnection.ReadBytesAbsoluteAsync(address, 5, token).ConfigureAwait(false);
             header = BlockUtil.DecryptBlock(block.Key, header);
-            Log("Header decrypted.");
+            Log("Encabezado descifrado.");
 
             // Directly inject new value without checking current RAM value
             header[1] = (byte)valueToInject; // Convert sbyte to byte for writing
             header = BlockUtil.EncryptBlock(block.Key, header);
-            Log("Header encrypted with new value.");
+            Log("Encabezado encriptado con el nuevo valor.");
 
             try
             {
                 await SwitchConnection.WriteBytesAbsoluteAsync(header, address, token).ConfigureAwait(false);
-                Log("Write operation successful.");
+                Log("Operación de escritura realizada con éxito.");
             }
             catch (Exception ex)
             {
-                Log($"Exception in write operation: {ex.Message}");
+                Log($"Excepción en operación de escritura: {ex.Message}");
                 return false;
             }
 
@@ -846,7 +846,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             //Always read and decrypt first to validate address and data
@@ -873,7 +873,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             ulong pointer = await SwitchConnection.PointerAll(block.Pointer!, token).ConfigureAwait(false);
@@ -886,7 +886,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             //Always read and decrypt first to validate address and data
@@ -913,7 +913,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             //Always read and decrypt first to validate address and data
@@ -940,7 +940,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             //Always read and decrypt first to validate address and data
@@ -971,7 +971,7 @@ namespace SysBot.Pokemon.SV
                 SCTypeCode.Byte or SCTypeCode.SByte => await ReadEncryptedBlockByte(block, token).ConfigureAwait(false),
                 SCTypeCode.UInt32 => await ReadEncryptedBlockUint(block, token).ConfigureAwait(false),
                 SCTypeCode.Int32 => await ReadEncryptedBlockInt32(block, token).ConfigureAwait(false),
-                _ => throw new NotSupportedException($"Block {block.Name} (Type {block.Type}) is currently not supported.")
+                _ => throw new NotSupportedException($"Bloque {block.Name} (Type {block.Type}) no se admite actualmente.")
             };
         }
 
@@ -979,7 +979,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             ulong address = await GetBlockAddress(block, token).ConfigureAwait(false);
@@ -992,7 +992,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             ulong address = await GetBlockAddress(block, token).ConfigureAwait(false);
@@ -1021,7 +1021,7 @@ namespace SysBot.Pokemon.SV
         {
             if (Config.Connection.Protocol is SwitchProtocol.WiFi && !Connection.Connected)
             {
-                throw new InvalidOperationException("No remote connection");
+                throw new InvalidOperationException("Sin conexión remota");
             }
 
             ulong address = await GetBlockAddress(block, token).ConfigureAwait(false);

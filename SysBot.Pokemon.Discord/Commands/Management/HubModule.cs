@@ -13,7 +13,7 @@ namespace SysBot.Pokemon.Discord
     {
         [Command("status")]
         [Alias("stats")]
-        [Summary("Gets the status of the bot environment.")]
+        [Summary("Obtiene el estado del entorno del bot.")]
         public async Task GetStatusAsync()
         {
             var me = SysCord<T>.Runner;
@@ -31,8 +31,8 @@ namespace SysBot.Pokemon.Discord
             {
                 x.Name = "Resumen";
                 x.Value =
-                    $"Recuento de bots: {botCount}\n" +
-                    $"Estado de los Bot: {SummarizeBots(allBots)}\n";
+                    $"Cantidad de Bots: {botCount}\n" +
+                    $"Estado de los Bots: {SummarizeBots(allBots)}\n";
                 x.IsInline = false;
             });
 
@@ -42,7 +42,7 @@ namespace SysBot.Pokemon.Discord
         private static string SummarizeBots(IReadOnlyCollection<RoutineExecutor<PokeBotState>> bots)
         {
             if (bots.Count == 0)
-                return "<a:warning:1206483664939126795> No hay bots configurados.";
+                return "No hay bots configurados.";
             var summaries = bots.Select(z => $"- {z.GetSummary()}");
             return Environment.NewLine + string.Join(Environment.NewLine, summaries);
         }

@@ -16,14 +16,14 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("help")]
-        [Summary("Lists available commands.")]
+        [Summary("Enumera los comandos disponibles.")]
         public async Task HelpAsync()
         {
             List<Embed> embeds = new();
             var builder = new EmbedBuilder
             {
                 Color = new Color(114, 137, 218),
-                Description = "These are the commands you can use:",
+                Description = "Estos son los comandos que puedes usar:",
             };
 
             var mgr = SysCordSettings.Manager;
@@ -76,18 +76,18 @@ namespace SysBot.Pokemon.Discord
             if (builder.Fields.Count > 0)
                 embeds.Add(builder.Build());
 
-            await ReplyAsync("Help has arrived!", false, null, null, null, null, null, null, embeds.ToArray()).ConfigureAwait(false);
+            await ReplyAsync("¡La ayuda ha llegado!", false, null, null, null, null, null, null, embeds.ToArray()).ConfigureAwait(false);
         }
 
         [Command("help")]
-        [Summary("Lists information about a specific command.")]
-        public async Task HelpAsync([Summary("The command you want help for")] string command)
+        [Summary("Enumera información sobre un comando específico.")]
+        public async Task HelpAsync([Summary("El comando para el que deseas ayuda")] string command)
         {
             var result = _service.Search(Context, command);
 
             if (!result.IsSuccess)
             {
-                await ReplyAsync($"<a:warning:1206483664939126795> Lo siento, no pude encontrar un comando como **{command}**.").ConfigureAwait(false);
+                await ReplyAsync($"Lo siento, no pude encontrar un comando como **{command}**.").ConfigureAwait(false);
                 return;
             }
 
@@ -109,7 +109,7 @@ namespace SysBot.Pokemon.Discord
                 });
             }
 
-            await ReplyAsync("ha llegado la ayuda!", false, builder.Build()).ConfigureAwait(false);
+            await ReplyAsync("¡La ayuda ha llegado!", false, builder.Build()).ConfigureAwait(false);
         }
 
         private static string GetCommandSummary(CommandInfo cmd)
@@ -120,7 +120,7 @@ namespace SysBot.Pokemon.Discord
         private static string GetParameterSummary(IReadOnlyList<ParameterInfo> p)
         {
             if (p.Count == 0)
-                return "None";
+                return "Ninguno";
             return $"{p.Count}\n- " + string.Join("\n- ", p.Select(GetParameterSummary));
         }
 

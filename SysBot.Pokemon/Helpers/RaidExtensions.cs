@@ -4,13 +4,21 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace SysBot.Pokemon
 {
-    public class RaidExtensions<T> where T : PKM, new()
+    public static class RaidExtensions<T> where T : PKM, new()
     {
+        private static readonly HttpClient httpClient = new HttpClient(new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
         public static string PokeImg(PKM pkm, bool canGmax, bool fullSize)
         {
             bool md = false;
@@ -49,44 +57,33 @@ namespace SysBot.Pokemon
                     pkm.Form = 0;
                 }
                 else
+                {
                     pkm.Form = 1;
+                }
 
                 string s = pkm.IsShiny ? "r" : "n";
                 string g = md && pkm.Gender is not 1 ? "md" : "fd";
-                return $"https://raw.githubusercontent.com/bdawg1989/HomeImages/master/128x128/poke_capture_0" + $"{pkm.Species}" + "_00" + $"{pkm.Form}" + "_" + $"{g}" + "_n_00000000_f_" + $"{s}" + ".png";
+                return "https://raw.githubusercontent.com/bdawg1989/HomeImages/master/256x256/poke_capture_0" + $"{pkm.Species}" + "_00" + $"{pkm.Form}" + "_" + $"{g}" + "_n_00000000_f_" + $"{s}" + ".png";
             }
 
             baseLink[2] = pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : pkm.Species >= 1000 ? $"{pkm.Species}" : $"0{pkm.Species}";
             baseLink[3] = pkm.Form < 10 ? $"00{form}" : $"0{form}";
             baseLink[4] = pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : fd ? "fd" : md ? "md" : "mf";
             baseLink[5] = canGmax ? "g" : "n";
-            baseLink[6] = "0000000" + (pkm.Species == (int)Species.Alcremie && !canGmax ? pkm.Data[0xE4] : 0);
+            baseLink[6] = "0000000" + ((pkm.Species == (int)Species.Alcremie && !canGmax) ? ((IFormArgument)pkm).FormArgument.ToString() : "0");
             baseLink[8] = pkm.IsShiny ? "r.png" : "n.png";
             return string.Join("_", baseLink);
         }
 
-        public static string FormOutput(ushort species, byte form, out string[] formString)
-        {
-            var strings = GameInfo.GetStrings("en");
-            formString = FormConverter.GetFormList(species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, typeof(T) == typeof(PK9) ? EntityContext.Gen9 : EntityContext.Gen4);
-            if (formString.Length is 0)
-                return string.Empty;
-
-            formString[0] = "";
-            if (form >= formString.Length)
-                form = (byte)(formString.Length - 1);
-            return formString[form].Contains('-') ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
-        }
-
         public static A EnumParse<A>(string input) where A : struct, Enum => !Enum.TryParse(input, true, out A result) ? new() : result;
 
-        public static (int R, int G, int B) GetDominantColor(string imageUrl)
+        public static async Task<(int R, int G, int B)> GetDominantColorAsync(string imageUrl)
         {
             try
             {
-                using var httpClient = new HttpClient();
-                using var response = httpClient.GetAsync(imageUrl).Result;
-                using var stream = response.Content.ReadAsStreamAsync().Result;
+                using var response = await httpClient.GetAsync(imageUrl);
+                response.EnsureSuccessStatusCode();
+                using var stream = await response.Content.ReadAsStreamAsync();
                 using var image = new Bitmap(stream);
 
                 var colorCount = new Dictionary<System.Drawing.Color, int>();
@@ -109,9 +106,9 @@ namespace SysBot.Pokemon
                             pixelColor.B / 10 * 10
                         );
 
-                        if (colorCount.ContainsKey(quantizedColor))
+                        if (colorCount.TryGetValue(quantizedColor, out int count))
                         {
-                            colorCount[quantizedColor] += combinedFactor;
+                            colorCount[quantizedColor] = count + combinedFactor;
                         }
                         else
                         {
@@ -123,18 +120,16 @@ namespace SysBot.Pokemon
                 if (colorCount.Count == 0)
                     return (255, 255, 255);
 
-                var dominantColor = colorCount.Aggregate((a, b) => a.Value > b.Value ? a : b).Key;
+                var dominantColor = colorCount.OrderByDescending(kvp => kvp.Value).First().Key;
                 return (dominantColor.R, dominantColor.G, dominantColor.B);
             }
-            catch (HttpRequestException ex) when (ex.InnerException is WebException webEx && webEx.Status == WebExceptionStatus.TrustFailure)
+            catch (HttpRequestException ex)
             {
-                // Handle SSL certificate errors here.
-                LogUtil.LogError($"SSL Certificate error when accessing {imageUrl}. Error: {ex.Message}", "GetDominantColor");
+                LogUtil.LogError($"Error HTTP al acceder a {imageUrl}. Error: {ex.Message}", "GetDominantColorAsync");
             }
             catch (Exception ex)
             {
-                // Handle other errors here.
-                LogUtil.LogError($"Error processing image from {imageUrl}. Error: {ex.Message}", "GetDominantColor");
+                LogUtil.LogError($"Error al procesar la imagen de {imageUrl}. Error: {ex.Message}", "GetDominantColorAsync");
             }
 
             return (255, 255, 255);  // Default to white if an exception occurs.

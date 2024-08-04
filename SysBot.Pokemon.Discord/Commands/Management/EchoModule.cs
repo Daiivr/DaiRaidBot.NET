@@ -26,7 +26,7 @@ namespace SysBot.Pokemon.Discord
                 EmbedColorOption.Magenta => Color.Magenta,
                 EmbedColorOption.LightGrey => Color.LightGrey,
                 EmbedColorOption.DarkGrey => Color.DarkGrey,
-                _ => Color.Blue,  // Default to Blue if somehow an undefined enum value is used
+                _ => Color.Blue,  // Por defecto, Azul si se usa un valor de enumeración indefinido
             };
         }
     }
@@ -78,12 +78,12 @@ namespace SysBot.Pokemon.Discord
                 if (discord.GetChannel(ch.ID) is ISocketMessageChannel c)
                     AddEchoChannel(c, ch.ID);
             }
-            // EchoUtil.Echo("Added echo notification to Discord channel(s) on Bot startup.");
+            // EchoUtil.Echo("Se añadieron notificaciones de eco a los canales de Discord en el inicio del Bot.");
         }
 
         [Command("Announce", RunMode = RunMode.Async)]
         [Alias("announce")]
-        [Summary("Sends an announcement to all EchoChannels added by the aec command.")]
+        [Summary("Envía un anuncio a todos los EchoChannels agregados por el comando aec.")]
         [RequireOwner]
         public async Task AnnounceAsync([Remainder] string announcement)
         {
@@ -99,7 +99,7 @@ namespace SysBot.Pokemon.Discord
                 Color = embedColor,
                 Description = embedDescription
             }
-            .WithTitle("<a:Megaphone:1218248132954030141>  Anuncio importante!")
+            .WithTitle("¡Anuncio Importante!")
             .WithThumbnailUrl(thumbnailUrl)
             .Build();
 
@@ -110,7 +110,7 @@ namespace SysBot.Pokemon.Discord
                 var channel = client.GetChannel(channelId) as ISocketMessageChannel;
                 if (channel == null)
                 {
-                    LogUtil.LogError($"<a:warning:1206483664939126795> No se pudo encontrar o acceder al canal {channelId}", nameof(AnnounceAsync));
+                    LogUtil.LogError($"No se pudo encontrar o acceder al canal {channelId}", nameof(AnnounceAsync));
                     continue;
                 }
 
@@ -120,10 +120,10 @@ namespace SysBot.Pokemon.Discord
                 }
                 catch (Exception ex)
                 {
-                    LogUtil.LogError($"<a:warning:1206483664939126795> No se pudo enviar el anuncio al canal {channel.Name}: {ex.Message}", nameof(AnnounceAsync));
+                    LogUtil.LogError($"No se pudo enviar el anuncio al canal {channel.Name}: {ex.Message}", nameof(AnnounceAsync));
                 }
             }
-            var confirmationMessage = await ReplyAsync("<a:yes:1206485105674166292> Anuncio enviado a todos los canales Echo.").ConfigureAwait(false);
+            var confirmationMessage = await ReplyAsync("Anuncio enviado a todos los EchoChannels.").ConfigureAwait(false);
             await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             await confirmationMessage.DeleteAsync().ConfigureAwait(false);
             await Context.Message.DeleteAsync().ConfigureAwait(false);
@@ -131,7 +131,7 @@ namespace SysBot.Pokemon.Discord
 
         private Color GetRandomColor()
         {
-            // Generate a random color
+            // Generar un color aleatorio
             var random = new Random();
             var colors = Enum.GetValues(typeof(EmbedColorOption)).Cast<EmbedColorOption>().ToList();
             return colors[random.Next(colors.Count)].ToDiscordColor();
@@ -139,26 +139,26 @@ namespace SysBot.Pokemon.Discord
 
         private string GetRandomThumbnail()
         {
-            // Define a list of available thumbnail URLs
+            // Definir una lista de URLs de miniaturas disponibles
             var thumbnailOptions = new List<string>
-    {
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/gengarmegaphone.png",
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/pikachumegaphone.png",
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/umbreonmegaphone.png",
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/sylveonmegaphone.png",
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/charmandermegaphone.png",
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/jigglypuffmegaphone.png",
-        "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/flareonmegaphone.png",
-    };
+            {
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/gengarmegaphone.png",
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/pikachumegaphone.png",
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/umbreonmegaphone.png",
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/sylveonmegaphone.png",
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/charmandermegaphone.png",
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/jigglypuffmegaphone.png",
+                "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/flareonmegaphone.png",
+            };
 
-            // Generate a random index and return the corresponding URL
+            // Generar un índice aleatorio y devolver la URL correspondiente
             var random = new Random();
             return thumbnailOptions[random.Next(thumbnailOptions.Count)];
         }
 
         private string GetSelectedThumbnail()
         {
-            // Use the custom thumbnail URL if it's not empty; otherwise, use the selected option
+            // Usar la URL de miniatura personalizada si no está vacía; de lo contrario, usar la opción seleccionada
             if (!string.IsNullOrEmpty(Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl))
             {
                 return Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl;
@@ -201,7 +201,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("addEmbedChannel")]
         [Alias("aec")]
-        [Summary("Makes the bot post raid embeds to the channel.")]
+        [Summary("Hace que el bot publique embeds de incursiones en el canal.")]
         [RequireSudo]
         public async Task AddEchoAsync()
         {
@@ -209,15 +209,15 @@ namespace SysBot.Pokemon.Discord
             var cid = c.Id;
             if (Channels.TryGetValue(cid, out _))
             {
-                await ReplyAsync("<a:no:1206485104424128593> Ya estoy notificando aquí.").ConfigureAwait(false);
+                await ReplyAsync("Ya está notificando aquí.").ConfigureAwait(false);
                 return;
             }
 
             AddEchoChannel(c, cid);
 
-            // Add to discord global loggers (saves on program close)
+            // Añadir a los registradores globales de Discord (se guarda al cerrar el programa)
             SysCordSettings.Settings.EchoChannels.AddIfNew(new[] { GetReference(Context.Channel) });
-            await ReplyAsync("<a:yes:1206485105674166292> Se agregó salida Raid Embed a este canal.!").ConfigureAwait(false);
+            await ReplyAsync("¡Salida de embed de incursión añadida a este canal!").ConfigureAwait(false);
         }
 
         private static async Task<bool> SendMessageWithRetry(ISocketMessageChannel c, string message, int maxRetries = 3)
@@ -228,16 +228,16 @@ namespace SysBot.Pokemon.Discord
                 try
                 {
                     await c.SendMessageAsync(message).ConfigureAwait(false);
-                    return true; // Successfully sent the message, exit the loop.
+                    return true; // Mensaje enviado con éxito, salir del bucle.
                 }
                 catch (Exception ex)
                 {
-                    LogUtil.LogError($"<a:warning:1206483664939126795> No se pudo enviar el mensaje al canal '{c.Name}' (IntentO {retryCount + 1}): {ex.Message}", nameof(AddEchoChannel));
+                    LogUtil.LogError($"No se pudo enviar el mensaje al canal '{c.Name}' (Intento {retryCount + 1}): {ex.Message}", nameof(AddEchoChannel));
                     retryCount++;
-                    await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false); // Wait for 5 seconds before retrying.
+                    await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false); // Esperar 5 segundos antes de reintentar.
                 }
             }
-            return false; // Reached max number of retries without success.
+            return false; // Se alcanzó el número máximo de intentos sin éxito.
         }
 
         private static async Task<bool> RaidEmbedAsync(ISocketMessageChannel c, byte[] bytes, string fileName, EmbedBuilder embed, int maxRetries = 2)
@@ -255,17 +255,17 @@ namespace SysBot.Pokemon.Discord
                     {
                         await c.SendMessageAsync("", false, embed.Build()).ConfigureAwait(false);
                     }
-                    return true; // Successfully sent the message, exit the loop.
+                    return true; // Mensaje enviado con éxito, salir del bucle.
                 }
                 catch (Exception ex)
                 {
-                    LogUtil.LogError($"<a:warning:1206483664939126795> No se pudo enviar el embed al canal '{c.Name}' (Intento {retryCount + 1}): {ex.Message}", nameof(AddEchoChannel));
+                    LogUtil.LogError($"No se pudo enviar el embed al canal '{c.Name}' (Intento {retryCount + 1}): {ex.Message}", nameof(AddEchoChannel));
                     retryCount++;
                     if (retryCount < maxRetries)
-                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false); // Wait for a second before retrying.
+                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false); // Esperar un segundo antes de reintentar.
                 }
             }
-            return false; // Reached max number of retries without success.
+            return false; // Se alcanzó el número máximo de intentos sin éxito.
         }
 
         private static void AddEchoChannel(ISocketMessageChannel c, ulong cid)
@@ -292,7 +292,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("echoInfo")]
-        [Summary("Dumps the special message (Echo) settings.")]
+        [Summary("Vuelca la configuración de mensajes especiales (Echo).")]
         [RequireSudo]
         public async Task DumpEchoInfoAsync()
         {
@@ -302,40 +302,40 @@ namespace SysBot.Pokemon.Discord
 
         [Command("echoClear")]
         [Alias("rec")]
-        [Summary("Clears the special message echo settings in that specific channel.")]
+        [Summary("Borra la configuración de mensajes especiales (Echo) en ese canal específico.")]
         [RequireSudo]
         public async Task ClearEchosAsync()
         {
             var id = Context.Channel.Id;
             if (!Channels.TryGetValue(id, out var echo))
             {
-                await ReplyAsync("<a:warning:1206483664939126795> No hace eco en este canal..").ConfigureAwait(false);
+                await ReplyAsync("No se está haciendo eco en este canal.").ConfigureAwait(false);
                 return;
             }
             EchoUtil.Forwarders.Remove(echo.Action);
             EchoUtil.RaidForwarders.Remove(echo.RaidAction);
             Channels.Remove(Context.Channel.Id);
             SysCordSettings.Settings.EchoChannels.RemoveAll(z => z.ID == id);
-            await ReplyAsync($"Echoes cleared from channel: {Context.Channel.Name}").ConfigureAwait(false);
+            await ReplyAsync($"Ecos eliminados del canal: {Context.Channel.Name}").ConfigureAwait(false);
         }
 
         [Command("echoClearAll")]
         [Alias("raec")]
-        [Summary("Clears all the special message Echo channel settings.")]
+        [Summary("Borra toda la configuración de mensajes especiales (Echo) en todos los canales.")]
         [RequireSudo]
         public async Task ClearEchosAllAsync()
         {
             foreach (var l in Channels)
             {
                 var entry = l.Value;
-                await ReplyAsync($"<a:yes:1206485105674166292> Eco borrado de {entry.ChannelName} ({entry.ChannelID}!").ConfigureAwait(false);
+                await ReplyAsync($"Eco eliminado de {entry.ChannelName} ({entry.ChannelID})!").ConfigureAwait(false);
                 EchoUtil.Forwarders.Remove(entry.Action);
             }
             EchoUtil.Forwarders.RemoveAll(y => Channels.Select(x => x.Value.Action).Contains(y));
             EchoUtil.RaidForwarders.RemoveAll(y => Channels.Select(x => x.Value.RaidAction).Contains(y));
             Channels.Clear();
             SysCordSettings.Settings.EchoChannels.Clear();
-            await ReplyAsync("<a:yes:1206485105674166292> Ecos eliminados de todos los canales!").ConfigureAwait(false);
+            await ReplyAsync("Ecos eliminados de todos los canales!").ConfigureAwait(false);
         }
 
         private RemoteControlAccess GetReference(IChannel channel) => new()

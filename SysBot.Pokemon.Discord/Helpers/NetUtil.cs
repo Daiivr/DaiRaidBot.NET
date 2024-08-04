@@ -18,7 +18,7 @@ namespace SysBot.Pokemon.Discord
             var result = new Download<PKM> { SanitizedFileName = Format.Sanitize(att.Filename) };
             if (!EntityDetection.IsSizePlausible(att.Size))
             {
-                result.ErrorMessage = $"{result.SanitizedFileName}: Tamaño no válido.";
+                result.ErrorMessage = $"{result.SanitizedFileName}: Invalid size.";
                 return result;
             }
 
@@ -30,7 +30,7 @@ namespace SysBot.Pokemon.Discord
             var pkm = EntityFormat.GetFromBytes(buffer, prefer);
             if (pkm == null)
             {
-                result.ErrorMessage = $"{result.SanitizedFileName}: Archivo adjunto de pkm no válido.";
+                result.ErrorMessage = $"{result.SanitizedFileName}: Invalid pkm attachment.";
                 return result;
             }
 

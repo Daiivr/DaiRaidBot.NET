@@ -11,19 +11,19 @@ namespace SysBot.Pokemon.Discord
     {
         [Command("setavatar")]
         [Alias("botavatar", "changeavatar", "sa", "ba")]
-        [Summary("Sets the bot's avatar to a specified GIF.")]
+        [Summary("Establece el avatar del bot a un GIF especificado.")]
         [RequireOwner]
         public async Task SetAvatarAsync()
         {
             if (Context.Message.Attachments.Count == 0)
             {
-                await ReplyAsync("<a:warning:1206483664939126795> Adjunte una imagen GIF para establecerla como avatar."); // standard (boring) images can be set via dashboard
+                await ReplyAsync("Por favor, adjunta una imagen GIF para establecer como avatar."); // las imágenes estándar (aburridas) se pueden configurar a través del panel de control
                 return;
             }
             var attachment = Context.Message.Attachments.First();
             if (!attachment.Filename.EndsWith(".gif"))
             {
-                await ReplyAsync("Proporcione una imagen GIF.");
+                await ReplyAsync("Por favor, proporciona una imagen GIF.");
                 return;
             }
 
@@ -34,7 +34,7 @@ namespace SysBot.Pokemon.Discord
             var image = new Image(ms);
             await Context.Client.CurrentUser.ModifyAsync(user => user.Avatar = image);
 
-            await ReplyAsync("<a:yes:1206485105674166292> Avatar actualizado exitosamente!");
+            await ReplyAsync("¡Avatar actualizado con éxito!");
         }
     }
 }

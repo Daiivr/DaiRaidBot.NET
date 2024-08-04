@@ -9,12 +9,9 @@ using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord
 {
-    // src: https://github.com/foxbot/patek/blob/master/src/Patek/Modules/InfoModule.cs
-    // ISC License (ISC)
-    // Copyright 2017, Christopher F. <foxbot@protonmail.com>
     public class InfoModule : ModuleBase<SocketCommandContext>
     {
-        private const string detail = "Soy un Raid Bot de código abierto impulsado por PKHe X.Core y otro software de código abierto.";
+        private const string detail = "Soy un Bot de Incursiones de Código Abierto impulsado por PKHeX.Core y otros programas de código abierto.";
         public const string version = DaiRaidBot.Version;
         private const string support = DaiRaidBot.Repo;
         private const ulong DisallowedUserId = 195756980873199618;
@@ -25,11 +22,11 @@ namespace SysBot.Pokemon.Discord
         {
             if (Context.User.Id == DisallowedUserId)
             {
-                await ReplyAsync("No permitimos que personas turbias usen este comando.").ConfigureAwait(false);
+                await ReplyAsync("No permitimos que personas sospechosas usen este comando.").ConfigureAwait(false);
                 return;
             }
             var app = await Context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
-            var programIconUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/icon4.png";
+            var programIconUrl = "https://i.imgur.com/MdimOfV.png";
             var builder = new EmbedBuilder
             {
                 Color = new Color(114, 137, 218),
@@ -39,27 +36,27 @@ namespace SysBot.Pokemon.Discord
 
             builder.AddField("# __Información del Bot__",
                 $"- **Versión**: {version}\n" +
-                $"- [Descarga DaiRaidBot]({support})" +
+                $"- [Descargar DaiRaidBot]({support})\n" +
                 $"- {Format.Bold("Propietario")}: {app.Owner} ({app.Owner.Id})\n" +
-                $"- {Format.Bold("Tiempo de actividad")}: {GetUptime()}\n" +
-                $"- {Format.Bold("Versión de PKHeX")}: {GetVersionInfo("PKHeX.Core")}\n" +
+                $"- {Format.Bold("Tiempo de Actividad")}: {GetUptime()}\n" +
+                $"- {Format.Bold("Versión del PKHeX")}: {GetVersionInfo("PKHeX.Core")}\n" +
                 $"- {Format.Bold("Versión de AutoLegality")}: {GetVersionInfo("PKHeX.Core.AutoMod")}\n"
                 );
 
             builder.AddField("Estadísticas",
-                $"- {Format.Bold("Servers")}: {Context.Client.Guilds.Count}\n" +
+                $"- {Format.Bold("Servidores")}: {Context.Client.Guilds.Count}\n" +
                 $"- {Format.Bold("Canales")}: {Context.Client.Guilds.Sum(g => g.Channels.Count)}\n" +
-                $"- {Format.Bold("Usuarios")}: {Context.Client.Guilds.Sum(g => g.MemberCount)}\n"
+                $"- {Format.Bold("Usuarios")}: {Context.Client.Guilds.Sum(g => g.MemberCount)}"
                 );
             builder.WithThumbnailUrl("https://i.imgur.com/jfG4V11.png");
-            await ReplyAsync("He aquí un poco de informacion sobre mí!", embed: builder.Build()).ConfigureAwait(false);
+            await ReplyAsync("¡Aquí tienes un poco de información sobre mí!", embed: builder.Build()).ConfigureAwait(false);
         }
 
         private static string GetUptime() => (DateTime.Now - Process.GetCurrentProcess().StartTime).ToString(@"dd\.hh\:mm\:ss");
 
         private static string GetVersionInfo(string assemblyName)
         {
-            const string _default = "Unknown";
+            const string _default = "Desconocido";
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             var assembly = assemblies.FirstOrDefault(x => x.GetName().Name == assemblyName);
             if (assembly is null)

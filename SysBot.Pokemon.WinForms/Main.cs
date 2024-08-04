@@ -37,6 +37,10 @@ namespace SysBot.Pokemon.WinForms
                 return;
             string discordName = string.Empty;
 
+            // Update checker
+            UpdateChecker updateChecker = new();
+            await UpdateChecker.CheckForUpdatesAsync();
+
             if (File.Exists(Program.ConfigPath))
             {
                 var lines = File.ReadAllText(Program.ConfigPath);
@@ -58,7 +62,7 @@ namespace SysBot.Pokemon.WinForms
             }
 
             LoadControls();
-            Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "DaiRaidBot.NET" : Config.Hub.BotName)} {DaiRaidBot.Version} ({Config.Mode})";
+            Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "DaiRaidBot.net" : Config.Hub.BotName)} {DaiRaidBot.Version} ({Config.Mode})";
             Task.Run(BotMonitor);
             InitUtil.InitializeStubs(Config.Mode);
         }
@@ -188,7 +192,7 @@ namespace SysBot.Pokemon.WinForms
         {
             if (Config == null)
             {
-                throw new InvalidOperationException("Config has not been initialized because a valid license was not entered.");
+                throw new InvalidOperationException("La configuración no se ha inicializado porque no se ingresó una licencia válida.");
             }
             Config.Bots = Bots.ToArray();
             return Config;
@@ -241,7 +245,7 @@ namespace SysBot.Pokemon.WinForms
             Tab_Logs.Select();
 
             if (Bots.Count == 0)
-                WinFormsUtil.Alert("No se han configurado bots, pero se han iniciado todos los servicios de soporte..");
+                WinFormsUtil.Alert("No hay bots configurados, pero se han iniciado todos los servicios de soporte.");
         }
 
         private void B_RebootReset_Click(object sender, EventArgs e)
@@ -251,23 +255,37 @@ namespace SysBot.Pokemon.WinForms
             {
                 await Task.Delay(3_500).ConfigureAwait(false);
                 SaveCurrentConfig();
-                LogUtil.LogInfo("Restarting all the consoles...", "Form");
+                LogUtil.LogInfo("Reiniciando todas las consolas...", "Form");
                 RunningEnvironment.InitializeStart();
                 SendAll(BotControlCommand.RebootReset);
                 Tab_Logs.Select();
                 if (Bots.Count == 0)
-                    WinFormsUtil.Alert("No se han configurado bots, pero a todos los servicios de soporte se les ha emitido el comando de reinicio.");
+                    WinFormsUtil.Alert("No hay bots configurados, pero se ha emitido el comando de reinicio a todos los servicios de soporte.");
             });
+        }
+
+        private async void Updater_Click(object sender, EventArgs e)
+        {
+            var (updateAvailable, updateRequired, newVersion) = await UpdateChecker.CheckForUpdatesAsync();
+            if (updateAvailable)
+            {
+                UpdateForm updateForm = new UpdateForm(updateRequired, newVersion);
+                updateForm.ShowDialog();
+            }
+            else
+            {
+                MessageBox.Show("No hay actualizaciones disponibles.", "Comprobación de actualización", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void RefreshMap_Click(object sender, EventArgs e)
         {
             SaveCurrentConfig();
-            LogUtil.LogInfo("Sending RefreshMap command to all bots.", "Refresh Map");
+            LogUtil.LogInfo("Envíando el comando Actualizar mapa a todos los bots.", "Actualizar mapa");
             SendAll(BotControlCommand.RefreshMap);
             Tab_Logs.Select();
             if (Bots.Count == 0)
-                WinFormsUtil.Alert("No bots configured, but all supporting services have been issued the refresh map command.");
+                WinFormsUtil.Alert("No hay bots configurados, pero todos los servicios de apoyo han recibido el comando refrescar mapa.");
 
         }
 
@@ -276,7 +294,7 @@ namespace SysBot.Pokemon.WinForms
             foreach (var c in FLP_Bots.Controls.OfType<BotController>())
                 c.SendCommand(cmd, false);
 
-            LogUtil.LogText($"Todos los bots han recibido la orden de {cmd}.");
+            LogUtil.LogText($"Todos los robots han recibido la orden de {cmd}.");
         }
 
         private void B_Stop_Click(object sender, EventArgs e)
@@ -294,12 +312,12 @@ namespace SysBot.Pokemon.WinForms
             {
                 if (env.IsRunning)
                 {
-                    WinFormsUtil.Alert("Ordenando a todos los robots que se pongan en reposo", "Pulsa Stop (sin una tecla modificadora) para parar y desbloquear el control, o pulsa Stop con la tecla modificadora de nuevo para reanudar.");
+                    WinFormsUtil.Alert("Ordenando a todos los bots que se pongan en reposo", "Pulsa Stop (sin una tecla modificadora) para parar y desbloquear el control, o pulsa Stop con la tecla modificadora de nuevo para reanudar");
                     cmd = BotControlCommand.Idle;
                 }
                 else
                 {
-                    WinFormsUtil.Alert("Ordenando a todos los robots que reanuden su tarea original", "Pulsar Stop (sin una tecla modificadora) para detener y desbloquear el control.");
+                    WinFormsUtil.Alert("Ordena a todos los bots que reanuden su tarea original", "Pulsa Stop (sin una tecla modificadora) para detener y desbloquear el control");
                     cmd = BotControlCommand.Resume;
                 }
             }
@@ -311,7 +329,7 @@ namespace SysBot.Pokemon.WinForms
             var cfg = CreateNewBotConfig();
             if (!AddBot(cfg))
             {
-                WinFormsUtil.Alert("No se puede añadir el bot; asegúrese de que los detalles son válidos y no se duplican con un bot ya existente.");
+                WinFormsUtil.Alert("No se puede añadir bot; asegúrese de que los detalles son válidos y no se duplican con un bot ya existente.");
                 return;
             }
             System.Media.SystemSounds.Asterisk.Play();
@@ -451,7 +469,7 @@ namespace SysBot.Pokemon.WinForms
             Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
             Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
             Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
-
+            Color RefreshMap = Color.FromArgb(245, 245, 220);// Refresh Map Button
             // Set the background color of the form
             BackColor = ElegantWhite;
 
@@ -510,6 +528,9 @@ namespace SysBot.Pokemon.WinForms
 
             B_RebootReset.BackColor = RebootBlue;
             B_RebootReset.ForeColor = ElegantWhite;
+
+            B_RefreshMap.BackColor = RefreshMap;
+            B_RefreshMap.ForeColor = StartGreen;
         }
 
         private void ApplyGengarTheme()
@@ -524,6 +545,7 @@ namespace SysBot.Pokemon.WinForms
             Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
             Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
             Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
+            Color RefreshMap = Color.FromArgb(245, 245, 220);// Refresh Map Button
 
             // Set the background color of the form
             BackColor = MidnightBlack;
@@ -583,6 +605,9 @@ namespace SysBot.Pokemon.WinForms
 
             B_RebootReset.BackColor = RebootBlue;
             B_RebootReset.ForeColor = ElegantWhite;
+
+            B_RefreshMap.BackColor = RefreshMap;
+            B_RefreshMap.ForeColor = StartGreen;
         }
 
         private void ApplyLightTheme()
@@ -595,7 +620,7 @@ namespace SysBot.Pokemon.WinForms
             Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
             Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
             Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
-
+            Color RefreshMap = Color.FromArgb(245, 245, 220);// Refresh Map Button
             // Set the background color of the form
             BackColor = GentleGrey;
 
@@ -654,6 +679,9 @@ namespace SysBot.Pokemon.WinForms
 
             B_RebootReset.BackColor = RebootBlue;
             B_RebootReset.ForeColor = ElegantWhite;
+
+            B_RefreshMap.BackColor = RefreshMap;
+            B_RefreshMap.ForeColor = StartGreen;
         }
 
         private void ApplyPokemonTheme()
@@ -668,7 +696,7 @@ namespace SysBot.Pokemon.WinForms
             Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
             Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
             Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
-
+            Color RefreshMap = Color.FromArgb(245, 245, 220);// Refresh Map Button
             // Set the background color of the form
             BackColor = SleekGrey;
 
@@ -727,6 +755,9 @@ namespace SysBot.Pokemon.WinForms
 
             B_RebootReset.BackColor = RebootBlue;
             B_RebootReset.ForeColor = ElegantWhite;
+
+            B_RefreshMap.BackColor = RefreshMap;
+            B_RefreshMap.ForeColor = StartGreen;
         }
 
         private void ApplyDarkTheme()
@@ -740,7 +771,7 @@ namespace SysBot.Pokemon.WinForms
             Color StartGreen = Color.FromArgb(10, 74, 27);// Start Button
             Color StopRed = Color.FromArgb(74, 10, 10);// Stop Button
             Color RebootBlue = Color.FromArgb(10, 35, 74);// Reboot Button
-
+            Color RefreshMap = Color.FromArgb(245, 245, 220);// Refresh Map Button
             // Set the background color of the form
             BackColor = DarkGrey;
 
@@ -799,6 +830,14 @@ namespace SysBot.Pokemon.WinForms
 
             B_RebootReset.BackColor = RebootBlue;
             B_RebootReset.ForeColor = ElegantWhite;
+
+            B_RefreshMap.BackColor = RefreshMap;
+            B_RefreshMap.ForeColor = StartGreen;
+        }
+
+        private void Main_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

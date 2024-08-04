@@ -50,8 +50,9 @@ namespace SysBot.Pokemon.WinForms
             B_Stop = new Button();
             B_Start = new Button();
             B_RebootReset = new Button();
+            updater = new Button();
             ButtonPanel = new Panel();
-            button1 = new Button();
+            B_RefreshMap = new Button();
             TC_Main.SuspendLayout();
             Tab_Bots.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)NUD_Port).BeginInit();
@@ -62,16 +63,20 @@ namespace SysBot.Pokemon.WinForms
             // 
             // TC_Main
             // 
-            TC_Main.Appearance = TabAppearance.Buttons;
+            TC_Main.Appearance = TabAppearance.FlatButtons;
             TC_Main.Controls.Add(Tab_Bots);
             TC_Main.Controls.Add(Tab_Hub);
             TC_Main.Controls.Add(Tab_Logs);
             TC_Main.Dock = DockStyle.Fill;
+            TC_Main.Font = new Font("Cambria", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            TC_Main.ItemSize = new Size(60, 45);
             TC_Main.Location = new Point(0, 0);
+            TC_Main.Margin = new Padding(0);
+            TC_Main.Multiline = true;
             TC_Main.Name = "TC_Main";
-            TC_Main.Padding = new Point(20, 7);
+            TC_Main.Padding = new Point(0, 0);
             TC_Main.SelectedIndex = 0;
-            TC_Main.Size = new Size(623, 467);
+            TC_Main.Size = new Size(787, 519);
             TC_Main.TabIndex = 3;
             // 
             // Tab_Bots
@@ -83,9 +88,9 @@ namespace SysBot.Pokemon.WinForms
             Tab_Bots.Controls.Add(CB_Routine);
             Tab_Bots.Controls.Add(NUD_Port);
             Tab_Bots.Controls.Add(B_New);
-            Tab_Bots.Location = new Point(4, 35);
+            Tab_Bots.Location = new Point(4, 49);
             Tab_Bots.Name = "Tab_Bots";
-            Tab_Bots.Size = new Size(615, 428);
+            Tab_Bots.Size = new Size(779, 466);
             Tab_Bots.TabIndex = 0;
             Tab_Bots.Text = "Bots";
             // 
@@ -93,9 +98,9 @@ namespace SysBot.Pokemon.WinForms
             // 
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox1.FormattingEnabled = true;
-            comboBox1.Location = new Point(487, 6);
+            comboBox1.Location = new Point(562, 6);
             comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(117, 23);
+            comboBox1.Size = new Size(192, 25);
             comboBox1.TabIndex = 11;
             comboBox1.SelectedIndexChanged += ComboBox1_SelectedIndexChanged;
             // 
@@ -104,9 +109,9 @@ namespace SysBot.Pokemon.WinForms
             CB_Protocol.DropDownStyle = ComboBoxStyle.DropDownList;
             CB_Protocol.ForeColor = Color.Red;
             CB_Protocol.FormattingEnabled = true;
-            CB_Protocol.Location = new Point(289, 6);
+            CB_Protocol.Location = new Point(328, 6);
             CB_Protocol.Name = "CB_Protocol";
-            CB_Protocol.Size = new Size(67, 23);
+            CB_Protocol.Size = new Size(67, 25);
             CB_Protocol.TabIndex = 10;
             CB_Protocol.SelectedIndexChanged += CB_Protocol_SelectedIndexChanged;
             // 
@@ -121,7 +126,7 @@ namespace SysBot.Pokemon.WinForms
             FLP_Bots.Location = new Point(0, 37);
             FLP_Bots.Margin = new Padding(0);
             FLP_Bots.Name = "FLP_Bots";
-            FLP_Bots.Size = new Size(614, 395);
+            FLP_Bots.Size = new Size(779, 430);
             FLP_Bots.TabIndex = 9;
             FLP_Bots.Paint += FLP_Bots_Paint;
             FLP_Bots.Resize += FLP_Bots_Resize;
@@ -129,7 +134,7 @@ namespace SysBot.Pokemon.WinForms
             // TB_IP
             // 
             TB_IP.Font = new Font("Courier New", 12F);
-            TB_IP.Location = new Point(73, 7);
+            TB_IP.Location = new Point(110, 7);
             TB_IP.Name = "TB_IP";
             TB_IP.Size = new Size(134, 26);
             TB_IP.TabIndex = 8;
@@ -139,15 +144,15 @@ namespace SysBot.Pokemon.WinForms
             // 
             CB_Routine.DropDownStyle = ComboBoxStyle.DropDownList;
             CB_Routine.FormattingEnabled = true;
-            CB_Routine.Location = new Point(364, 6);
+            CB_Routine.Location = new Point(401, 6);
             CB_Routine.Name = "CB_Routine";
-            CB_Routine.Size = new Size(117, 23);
+            CB_Routine.Size = new Size(155, 25);
             CB_Routine.TabIndex = 7;
             // 
             // NUD_Port
             // 
             NUD_Port.Font = new Font("Courier New", 12F);
-            NUD_Port.Location = new Point(215, 7);
+            NUD_Port.Location = new Point(253, 7);
             NUD_Port.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
             NUD_Port.Name = "NUD_Port";
             NUD_Port.Size = new Size(68, 26);
@@ -158,9 +163,9 @@ namespace SysBot.Pokemon.WinForms
             // 
             B_New.FlatAppearance.BorderSize = 0;
             B_New.FlatStyle = FlatStyle.Flat;
-            B_New.Location = new Point(3, 7);
+            B_New.Location = new Point(22, 7);
             B_New.Name = "B_New";
-            B_New.Size = new Size(63, 23);
+            B_New.Size = new Size(79, 27);
             B_New.TabIndex = 0;
             B_New.Text = "Agregar";
             B_New.Click += B_New_Click;
@@ -168,10 +173,10 @@ namespace SysBot.Pokemon.WinForms
             // Tab_Hub
             // 
             Tab_Hub.Controls.Add(PG_Hub);
-            Tab_Hub.Location = new Point(4, 35);
+            Tab_Hub.Location = new Point(4, 49);
             Tab_Hub.Name = "Tab_Hub";
             Tab_Hub.Padding = new Padding(3);
-            Tab_Hub.Size = new Size(615, 428);
+            Tab_Hub.Size = new Size(779, 466);
             Tab_Hub.TabIndex = 2;
             Tab_Hub.Text = "Ajustes";
             // 
@@ -181,18 +186,18 @@ namespace SysBot.Pokemon.WinForms
             PG_Hub.Location = new Point(3, 3);
             PG_Hub.Name = "PG_Hub";
             PG_Hub.PropertySort = PropertySort.Categorized;
-            PG_Hub.Size = new Size(609, 422);
+            PG_Hub.Size = new Size(773, 460);
             PG_Hub.TabIndex = 0;
             PG_Hub.ToolbarVisible = false;
             // 
             // Tab_Logs
             // 
             Tab_Logs.Controls.Add(RTB_Logs);
-            Tab_Logs.Location = new Point(4, 35);
+            Tab_Logs.Location = new Point(4, 49);
             Tab_Logs.Name = "Tab_Logs";
-            Tab_Logs.Size = new Size(615, 428);
+            Tab_Logs.Size = new Size(779, 466);
             Tab_Logs.TabIndex = 1;
-            Tab_Logs.Text = "Registros";
+            Tab_Logs.Text = "Registro";
             // 
             // RTB_Logs
             // 
@@ -200,97 +205,130 @@ namespace SysBot.Pokemon.WinForms
             RTB_Logs.Location = new Point(0, 0);
             RTB_Logs.Name = "RTB_Logs";
             RTB_Logs.ReadOnly = true;
-            RTB_Logs.Size = new Size(615, 428);
+            RTB_Logs.Size = new Size(779, 466);
             RTB_Logs.TabIndex = 0;
             RTB_Logs.Text = "";
             // 
             // B_Stop
             // 
             B_Stop.BackColor = Color.Maroon;
-            B_Stop.FlatStyle = FlatStyle.Flat;
-            B_Stop.Font = new Font("Calibri", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            B_Stop.ForeColor = SystemColors.ControlLightLight;
-            B_Stop.Location = new Point(484, 0);
-            B_Stop.Margin = new Padding(2);
+            B_Stop.BackgroundImageLayout = ImageLayout.None;
+            B_Stop.FlatStyle = FlatStyle.Popup;
+            B_Stop.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            B_Stop.ForeColor = Color.WhiteSmoke;
+            B_Stop.Image = Resources.stopall;
+            B_Stop.ImageAlign = ContentAlignment.MiddleLeft;
+            B_Stop.Location = new Point(104, 9);
+            B_Stop.Margin = new Padding(0);
             B_Stop.Name = "B_Stop";
-            B_Stop.Size = new Size(139, 42);
+            B_Stop.Size = new Size(107, 28);
             B_Stop.TabIndex = 1;
-            B_Stop.Text = "Detener todo";
+            B_Stop.Text = "Detener Bots";
+            B_Stop.TextAlign = ContentAlignment.MiddleRight;
             B_Stop.UseVisualStyleBackColor = false;
             B_Stop.Click += B_Stop_Click;
             // 
             // B_Start
             // 
-            B_Start.BackColor = Color.ForestGreen;
-            B_Start.FlatStyle = FlatStyle.Flat;
-            B_Start.Font = new Font("Calibri", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            B_Start.ForeColor = SystemColors.ControlLightLight;
-            B_Start.Location = new Point(0, 0);
-            B_Start.Margin = new Padding(2);
+            B_Start.BackColor = Color.FromArgb(192, 255, 192);
+            B_Start.FlatStyle = FlatStyle.Popup;
+            B_Start.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            B_Start.ForeColor = Color.ForestGreen;
+            B_Start.Image = Resources.startall;
+            B_Start.ImageAlign = ContentAlignment.MiddleLeft;
+            B_Start.Location = new Point(2, 9);
+            B_Start.Margin = new Padding(0);
             B_Start.Name = "B_Start";
-            B_Start.Size = new Size(180, 42);
+            B_Start.Size = new Size(97, 28);
             B_Start.TabIndex = 0;
-            B_Start.Text = "Empezar todo";
+            B_Start.Text = "Iniciar Bots";
+            B_Start.TextAlign = ContentAlignment.MiddleRight;
             B_Start.UseVisualStyleBackColor = false;
             B_Start.Click += B_Start_Click;
             // 
             // B_RebootReset
             // 
-            B_RebootReset.BackColor = Color.SteelBlue;
-            B_RebootReset.FlatStyle = FlatStyle.Flat;
-            B_RebootReset.Font = new Font("Calibri", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            B_RebootReset.ForeColor = SystemColors.ControlLightLight;
-            B_RebootReset.Location = new Point(174, 0);
-            B_RebootReset.Margin = new Padding(2);
+            B_RebootReset.BackColor = Color.PowderBlue;
+            B_RebootReset.FlatStyle = FlatStyle.Popup;
+            B_RebootReset.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            B_RebootReset.ForeColor = Color.SteelBlue;
+            B_RebootReset.Image = Resources.refresh;
+            B_RebootReset.ImageAlign = ContentAlignment.MiddleLeft;
+            B_RebootReset.Location = new Point(346, 9);
+            B_RebootReset.Margin = new Padding(0);
             B_RebootReset.Name = "B_RebootReset";
-            B_RebootReset.Size = new Size(170, 42);
+            B_RebootReset.Size = new Size(105, 28);
             B_RebootReset.TabIndex = 2;
-            B_RebootReset.Text = "Reiniciar y Empezar";
+            B_RebootReset.Text = "Reiniciar Bot";
+            B_RebootReset.TextAlign = ContentAlignment.MiddleRight;
             B_RebootReset.UseVisualStyleBackColor = false;
             B_RebootReset.Click += B_RebootReset_Click;
             // 
+            // updater
+            // 
+            updater.BackColor = Color.Gray;
+            updater.FlatStyle = FlatStyle.Popup;
+            updater.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            updater.ForeColor = Color.Transparent;
+            updater.Image = Resources.update;
+            updater.ImageAlign = ContentAlignment.MiddleLeft;
+            updater.Location = new Point(456, 9);
+            updater.Margin = new Padding(0);
+            updater.Name = "updater";
+            updater.Size = new Size(93, 28);
+            updater.TabIndex = 3;
+            updater.Text = "Actualizar";
+            updater.TextAlign = ContentAlignment.MiddleRight;
+            updater.UseVisualStyleBackColor = false;
+            updater.Click += Updater_Click;
+            // 
             // ButtonPanel
             // 
-            ButtonPanel.BackColor = Color.Transparent;
-            ButtonPanel.Controls.Add(button1);
+            ButtonPanel.BackColor = SystemColors.Control;
+            ButtonPanel.Controls.Add(B_RefreshMap);
+            ButtonPanel.Controls.Add(updater);
+            ButtonPanel.Controls.Add(B_RebootReset);
             ButtonPanel.Controls.Add(B_Stop);
             ButtonPanel.Controls.Add(B_Start);
-            ButtonPanel.Controls.Add(B_RebootReset);
-            ButtonPanel.Dock = DockStyle.Bottom;
-            ButtonPanel.Location = new Point(0, 467);
-            ButtonPanel.Margin = new Padding(2);
+            ButtonPanel.Location = new Point(230, 0);
+            ButtonPanel.Margin = new Padding(3, 4, 3, 4);
             ButtonPanel.Name = "ButtonPanel";
-            ButtonPanel.Size = new Size(623, 42);
+            ButtonPanel.Size = new Size(555, 42);
             ButtonPanel.TabIndex = 0;
             // 
-            // button1
+            // B_RefreshMap
             // 
-            button1.BackColor = Color.LightSeaGreen;
-            button1.FlatStyle = FlatStyle.Flat;
-            button1.Font = new Font("Calibri", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            button1.ForeColor = SystemColors.ControlLightLight;
-            button1.Location = new Point(341, 0);
-            button1.Margin = new Padding(2);
-            button1.Name = "button1";
-            button1.Size = new Size(146, 42);
-            button1.TabIndex = 2;
-            button1.Text = "Actualizar mapa";
-            button1.UseVisualStyleBackColor = false;
-            button1.Click += RefreshMap_Click;
+            B_RefreshMap.BackColor = Color.LightGray;
+            B_RefreshMap.BackgroundImageLayout = ImageLayout.None;
+            B_RefreshMap.FlatStyle = FlatStyle.Popup;
+            B_RefreshMap.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            B_RefreshMap.ForeColor = Color.Green;
+            B_RefreshMap.Image = Resources.maprefresh;
+            B_RefreshMap.ImageAlign = ContentAlignment.MiddleLeft;
+            B_RefreshMap.Location = new Point(216, 9);
+            B_RefreshMap.Margin = new Padding(0);
+            B_RefreshMap.Name = "B_RefreshMap";
+            B_RefreshMap.Size = new Size(125, 28);
+            B_RefreshMap.TabIndex = 4;
+            B_RefreshMap.Text = "Actualizar mapa";
+            B_RefreshMap.TextAlign = ContentAlignment.MiddleRight;
+            B_RefreshMap.UseVisualStyleBackColor = false;
+            B_RefreshMap.Click += RefreshMap_Click;
             // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(623, 509);
-            Controls.Add(TC_Main);
+            ClientSize = new Size(787, 519);
             Controls.Add(ButtonPanel);
+            Controls.Add(TC_Main);
             Icon = Resources.icon;
             MaximizeBox = false;
             Name = "Main";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "DaiRaidBot.NET";
+            Text = "Dai RaidBot";
             FormClosing += Main_FormClosing;
+            Load += Main_Load;
             TC_Main.ResumeLayout(false);
             Tab_Bots.ResumeLayout(false);
             Tab_Bots.PerformLayout();
@@ -319,7 +357,8 @@ namespace SysBot.Pokemon.WinForms
         private ComboBox comboBox1;
         private Button B_RebootReset;
         private Panel ButtonPanel;
-        private Button button1;
+        private Button updater;
+        private Button B_RefreshMap;
     }
 }
 

@@ -5,6 +5,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Discord.Helpers;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -16,21 +17,22 @@ namespace SysBot.Pokemon.Discord
     public static class SysCordSettings
     {
         public static DiscordManager Manager { get; internal set; } = default!;
-        public static DiscordSettings Settings => Manager.Config;
-        public static PokeRaidHubConfig HubConfig { get; internal set; } = default!;
+        public static DiscordSettings? Settings => Manager.Config;
+        public static PokeRaidHubConfig? HubConfig { get; internal set; } = default!;
     }
 
     public sealed class SysCord<T> where T : PKM, new()
     {
-        public static PokeBotRunner<T> Runner { get; private set; } = default!;
-        public static RestApplication App { get; private set; } = default!;
+        public static PokeBotRunner<T>? Runner { get; private set; } = default!;
+        public static RestApplication? App { get; private set; } = default!;
 
-        public static SysCord<T> Instance { get; private set; }
-        public static ReactionService ReactionService { get; private set; }
+        public static SysCord<T>? Instance { get; private set; }
+        public static ReactionService? ReactionService { get; private set; }
         private readonly DiscordSocketClient _client;
         private readonly DiscordManager Manager;
         public readonly PokeRaidHub<T> Hub;
-
+        private const int MaxReconnectDelay = 60000; // 1 minute
+        private int _reconnectAttempts = 0;
         // Keep the CommandService and DI container around for use with commands.
         // These two types require you install the Discord.Net.Commands package.
         private readonly CommandService _commands;
@@ -52,15 +54,17 @@ namespace SysBot.Pokemon.Discord
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Info,
-                GatewayIntents = GatewayIntents.Guilds |
-                                GatewayIntents.GuildMessages |
-                                GatewayIntents.DirectMessages |
-                                GatewayIntents.GuildMembers |
-                                GatewayIntents.MessageContent |
-                                GatewayIntents.GuildMessageReactions,
-                MessageCacheSize = 100,
+                GatewayIntents = GatewayIntents.Guilds
+                       | GatewayIntents.GuildMessages
+                       | GatewayIntents.DirectMessages
+                       | GatewayIntents.MessageContent
+                       | GatewayIntents.GuildMessageReactions
+                       | GatewayIntents.GuildMembers,
+                MessageCacheSize = 500, 
                 AlwaysDownloadUsers = true,
+                ConnectionTimeout = 30000,
             });
+            _client.Disconnected += (ex) => HandleDisconnect(ex);
 
             _commands = new CommandService(new CommandServiceConfig
             {
@@ -132,6 +136,39 @@ namespace SysBot.Pokemon.Discord
             _ => Console.ForegroundColor,
         };
 
+        private Task HandleDisconnect(Exception ex)
+        {
+            if (ex is GatewayReconnectException)
+            {
+                // Discord is telling us to reconnect, so we don't need to handle it ourselves
+                return Task.CompletedTask;
+            }
+
+            // Log the disconnection
+            Log(new LogMessage(LogSeverity.Warning, "Gateway", $"Disconnected: {ex.Message}"));
+
+            // Use Task.Run to avoid blocking
+            Task.Run(async () =>
+            {
+                var delay = Math.Min(MaxReconnectDelay, 1000 * Math.Pow(2, _reconnectAttempts));
+                await Task.Delay((int)delay);
+
+                try
+                {
+                    await _client.StartAsync();
+                    _reconnectAttempts = 0;
+                    Log(new LogMessage(LogSeverity.Info, "Gateway", "Reconnected successfully"));
+                }
+                catch (Exception reconnectEx)
+                {
+                    _reconnectAttempts++;
+                    Log(new LogMessage(LogSeverity.Error, "Gateway", $"Failed to reconnect: {reconnectEx.Message}"));
+                }
+            });
+
+            return Task.CompletedTask;
+        }
+
         public async Task MainAsync(string apiToken, CancellationToken token)
         {
             // Centralize the logic for commands into a separate method.
@@ -144,6 +181,9 @@ namespace SysBot.Pokemon.Discord
             var app = await _client.GetApplicationInfoAsync().ConfigureAwait(false);
             Manager.Owner = app.Owner.Id;
             App = app;
+
+            // Start the connection status check
+            _ = CheckConnectionStatus(token);
 
             // Wait infinitely so your bot actually stays connected.
             await MonitorStatusAsync(token).ConfigureAwait(false);
@@ -266,6 +306,27 @@ namespace SysBot.Pokemon.Discord
             var game = Hub.Config.Discord.BotGameStatus;
             if (!string.IsNullOrWhiteSpace(game))
                 await _client.SetGameAsync(game).ConfigureAwait(false);
+        }
+
+        private async Task CheckConnectionStatus(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                if (_client.ConnectionState == ConnectionState.Disconnected)
+                {
+                    Log(new LogMessage(LogSeverity.Warning, "Gateway", "Detected disconnected state, attempting to reconnect..."));
+                    try
+                    {
+                        await _client.StartAsync();
+                        Log(new LogMessage(LogSeverity.Info, "Gateway", "Reconnected successfully"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(new LogMessage(LogSeverity.Error, "Gateway", $"Failed to reconnect: {ex.Message}"));
+                    }
+                }
+                await Task.Delay(60000, token); // Check every minute
+            }
         }
     }
 }

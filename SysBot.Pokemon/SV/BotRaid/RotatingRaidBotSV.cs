@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Pokemon.RotatingRaidSettingsSV;
 using static SysBot.Pokemon.SV.BotRaid.Blocks;
+using System.Text.RegularExpressions;
 using static NatureTranslations;
 using static MovesTranslationDictionary;
 
@@ -30,6 +31,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         private readonly RotatingRaidSettingsSV Settings;
         private RemoteControlAccessList RaiderBanList => Settings.RaiderBanList;
         public static Dictionary<string, List<(int GroupID, int Index, string DenIdentifier)>> SpeciesToGroupIDMap = [];
+        private static readonly HttpClient httpClient = new HttpClient();
 
         public RotatingRaidBotSV(PokeBotState cfg, PokeRaidHub<PK9> hub) : base(cfg)
         {
@@ -98,22 +100,16 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             if (Settings.ActiveRaids.Count < 1)
             {
-                Log("ActiveRaids cannot be 0. Please setup your parameters for the raid(s) you are hosting.");
-                return;
-            }
-
-            if (Settings.RaidSettings.TimeToWait is < 0 or > 180)
-            {
-                Log("Time to wait must be between 0 and 180 seconds.");
+                Log("ActiveRaids no puede ser 0. Por favor, configure sus parámetros para las raid(s) que está alojando.");
                 return;
             }
 
             try
             {
-                Log("Identifying trainer data of the host console.");
+                Log("Datos identificativos del entrenador de la consola anfitriona.");
                 HostSAV = await IdentifyTrainer(token).ConfigureAwait(false);
                 await InitializeHardware(Settings, token).ConfigureAwait(false);
-                Log("Starting main RotatingRaidBot loop.");
+                Log("Iniciando bucle principal de RotatingRaidBot.");
                 await InnerLoop(token).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -124,7 +120,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 SaveSeeds();
             }
-            Log($"Ending {nameof(RotatingRaidBotSV)} loop.");
+            Log($"Finalizando bucle {nameof(RotatingRaidBotSV)}.");
             await HardStop().ConfigureAwait(false);
         }
 
@@ -135,7 +131,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             await Task.Delay(2_000, t).ConfigureAwait(false);
             if (!t.IsCancellationRequested)
             {
-                Log("Restarting the inner loop.");
+                Log("Reiniciando el bucle interno.");
                 await InnerLoop(t).ConfigureAwait(false);
             }
         }
@@ -186,12 +182,12 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (!File.Exists(rotationpath))
             {
                 File.WriteAllText(rotationpath, "000091EC-Kricketune-3-6,0000717F-Seviper-3-6");
-                Log("Creating a default raidsv.txt file, skipping generation as file is empty.");
+                Log("Creación de un archivo raidsv.txt por defecto, omitiendo la generación ya que el archivo está vacío.");
                 return;
             }
 
             if (!File.Exists(rotationpath))
-                Log("raidsv.txt not present, skipping parameter generation.");
+                Log("raidsv.txt no está presente, omitiendo la generación de parámetros.");
 
             BaseDescription = string.Empty;
             var prevpath = "bodyparam.txt";
@@ -277,7 +273,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 // Check if the split result has exactly 4 parts
                 if (div.Length != 4)
                 {
-                    Log($"Error processing entry: {moninfo[i]}. Expected 4 parts but found {div.Length}. Skipping this entry.");
+                    Log($"Error al procesar la entrada: {moninfo[i]}. Se esperaban 4 partes pero se encontró {div.Length}. Omitiendo esta entrada.");
                     continue; // Skip processing this entry and move to the next one
                 }
 
@@ -287,14 +283,14 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 if (!int.TryParse(div[2], out int difficultyLevel))
                 {
-                    Log($"Unable to parse difficulty level for entry: {moninfo[i]}");
+                    Log($"No se ha podido analizar el nivel de dificultad de la entrada: {moninfo[i]}");
                     continue;
                 }
 
                 // Extract and convert the StoryProgressLevel
                 if (!int.TryParse(div[3], out int storyProgressLevelFromSeed))
                 {
-                    Log($"Unable to parse StoryProgressLevel for entry: {moninfo[i]}");
+                    Log($"No se puede analizar StoryProgressLevel para la entrada: {moninfo[i]}");
                     continue;
                 }
 
@@ -324,142 +320,162 @@ namespace SysBot.Pokemon.SV.BotRaid
                 Settings.ActiveRaids.Add(param);
 
                 // Log the raid parameter generation
-                Log($"Parameters generated from text file for {montitle}.");
+                Log($"Parámetros generados a partir de un archivo de texto para {montitle}.");
             }
         }
 
         private async Task InnerLoop(CancellationToken token)
         {
-            bool partyReady;
-            RotationCount = 0;
-            var raidsHosted = 0;
-
-            while (!token.IsCancellationRequested)
+            try
             {
-                // Initialize offsets at the start of the routine and cache them.
-                await InitializeSessionOffsets(token).ConfigureAwait(false);
-                if (RaidCount == 0)
-                {
-                    TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
-                    Log($"Today Seed: {TodaySeed:X8}");
-                }
+                bool partyReady;
+                RotationCount = 0;
+                var raidsHosted = 0;
 
-                Log($"Preparing parameter for {Settings.ActiveRaids[RotationCount].Species}");
-                await ReadRaids(token).ConfigureAwait(false);
-
-                var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
-                if (TodaySeed != currentSeed || LobbyError >= 2)
+                while (!token.IsCancellationRequested)
                 {
-                    if (TodaySeed != currentSeed)
+                    try
                     {
-                        Log($"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8}.\nAttempting to override Today Seed...");
-                        TodaySeed = currentSeed;
-                        await OverrideTodaySeed(token).ConfigureAwait(false);
-                        Log("Today Seed has been overridden with the current seed.");
-                    }
-
-                    if (LobbyError >= 2)
-                    {
-                        string? msg = $"<a:warning:1206483664939126795> No se pudo crear un lobby {LobbyError} veces.\n";
-                        Log(msg);
-                        await CloseGame(Hub.Config, token).ConfigureAwait(false);
-                        await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
-                        LobbyError = 0;
-                        continue;
-                    }
-                }
-
-                // Clear NIDs.
-                await SwitchConnection.WriteBytesAbsoluteAsync(new byte[32], TeraNIDOffsets[0], token).ConfigureAwait(false);
-
-                // Connect online and enter den.
-                int prepareResult = await PrepareForRaid(token).ConfigureAwait(false);
-                if (prepareResult == 2)
-                {
-                    // Seed was injected, restart the loop
-                    continue;
-                }
-                else if (prepareResult == 0)
-                {
-                    // Preparation failed, reboot the game
-                    Log("Failed to prepare the raid, rebooting the game.");
-                    await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
-                    continue;
-                }
-
-                // Wait until we're in lobby.
-                if (!await GetLobbyReady(false, token).ConfigureAwait(false))
-                    continue;
-
-                if (Settings.ActiveRaids[RotationCount].AddedByRACommand)
-                {
-                    var user = Settings.ActiveRaids[RotationCount].User;
-                    var mentionedUsers = Settings.ActiveRaids[RotationCount].MentionedUsers;
-
-                    // Determine if the raid is a "Free For All"
-                    bool isFreeForAll = !Settings.ActiveRaids[RotationCount].IsCoded || EmptyRaid >= Settings.LobbyOptions.EmptyRaidLimit;
-
-                    if (!isFreeForAll)
-                    {
-                        try
+                        // Initialize offsets at the start of the routine and cache them.
+                        await InitializeSessionOffsets(token).ConfigureAwait(false);
+                        if (RaidCount == 0)
                         {
-                            // Only get and send the raid code if it's not a "Free For All"
-                            var code = await GetRaidCode(token).ConfigureAwait(false);
-                            if (user != null)
+                            TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
+                            Log($"Semilla de hoy: {TodaySeed:X8}");
+                        }
+
+                        Log($"Preparación de parámetros para {Settings.ActiveRaids[RotationCount].Species}");
+                        await ReadRaids(token).ConfigureAwait(false);
+
+                        var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
+                        if (TodaySeed != currentSeed || LobbyError >= 2)
+                        {
+                            if (TodaySeed != currentSeed)
                             {
-                                await user.SendMessageAsync($"Tu código de incursión es **{code}**").ConfigureAwait(false);
+                                Log($"La Semilla de Hoy Actual {currentSeed:X8} no coincide con la Semilla de Hoy Inicial: {TodaySeed:X8}.\nIntentando anular la Semilla de Hoy...");
+                                TodaySeed = currentSeed;
+                                await OverrideTodaySeed(token).ConfigureAwait(false);
+                                Log("La semilla de hoy ha sido sustituida por la semilla actual.");
                             }
-                            foreach (var mentionedUser in mentionedUsers)
+
+                            if (LobbyError >= 2)
                             {
-                                await mentionedUser.SendMessageAsync($"El código de incursión para la incursión privada a la que fuiste invitado por {user?.Username ?? "el anfitrion"} es **{code}**").ConfigureAwait(false);
+                                string? msg = $"Error al crear un lobby {LobbyError} veces.\n";
+                                Log(msg);
+                                await CloseGame(Hub.Config, token).ConfigureAwait(false);
+                                await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
+                                LobbyError = 0;
+                                continue;
                             }
                         }
-                        catch (Discord.Net.HttpException ex)
+
+                        // Clear NIDs.
+                        await SwitchConnection.WriteBytesAbsoluteAsync(new byte[32], TeraNIDOffsets[0], token).ConfigureAwait(false);
+
+                        // Connect online and enter den.
+                        int prepareResult;
+                        do
                         {
-                            // Handle exception (e.g., log the error or send a message to a logging channel)
-                            Log($"Failed to send DM to the user or mentioned users. They might have DMs turned off. Exception: {ex.Message}");
+                            prepareResult = await PrepareForRaid(token).ConfigureAwait(false);
+                            if (prepareResult == 0)
+                            {
+                                Log("Fallo al preparar la incursión, reiniciando el juego.");
+                                await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                            }
+                        } while (prepareResult == 0);
+
+                        if (prepareResult == 2)
+                        {
+                            // Seed was injected, restart the loop
+                            continue;
                         }
+
+                        // Wait until we're in lobby.
+                        if (!await GetLobbyReady(false, token).ConfigureAwait(false))
+                            continue;
+
+                        if (Settings.ActiveRaids[RotationCount].AddedByRACommand)
+                        {
+                            var user = Settings.ActiveRaids[RotationCount].User;
+                            var mentionedUsers = Settings.ActiveRaids[RotationCount].MentionedUsers;
+
+                            // Determine if the raid is a "Free For All"
+                            bool isFreeForAll = !Settings.ActiveRaids[RotationCount].IsCoded || EmptyRaid >= Settings.LobbyOptions.EmptyRaidLimit;
+
+                            if (!isFreeForAll)
+                            {
+                                try
+                                {
+                                    // Only get and send the raid code if it's not a "Free For All"
+                                    var code = await GetRaidCode(token).ConfigureAwait(false);
+                                    if (user != null)
+                                    {
+                                        await user.SendMessageAsync($"Su código de incursión es **{code}**").ConfigureAwait(false);
+                                    }
+                                    foreach (var mentionedUser in mentionedUsers)
+                                    {
+                                        await mentionedUser.SendMessageAsync($"El código de incursión para la incursión privada a la que has sido invitado por {user?.Username ?? "el anfitrión"} es **{code}**.").ConfigureAwait(false);
+                                    }
+                                }
+                                catch (Discord.Net.HttpException ex)
+                                {
+                                    // Handle exception (e.g., log the error or send a message to a logging channel)
+                                    Log($"No se ha podido enviar DM al usuario o usuarios mencionados. Puede que tengan los DMs desactivados. Excepción: {ex.Message}");
+                                }
+                            }
+                        }
+
+                        // Read trainers until someone joins.
+                        (partyReady, _) = await ReadTrainers(token).ConfigureAwait(false);
+                        if (!partyReady)
+                        {
+                            if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.SkipRaid)
+                            {
+                                await SkipRaidOnLosses(token).ConfigureAwait(false);
+                                EmptyRaid = 0;
+                                continue;
+                            }
+
+                            // Should add overworld recovery with a game restart fallback.
+                            await RegroupFromBannedUser(token).ConfigureAwait(false);
+
+                            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                            {
+                                Log("Algo salió mal, intentando recuperarse.");
+                                await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                                continue;
+                            }
+
+                            // Clear trainer OTs.
+                            Log("Borrando OTs almacenados");
+                            for (int i = 0; i < 3; i++)
+                            {
+                                List<long> ptr = new(Offsets.Trader2MyStatusPointer);
+                                ptr[2] += i * 0x30;
+                                await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
+                            }
+                            continue;
+                        }
+                        await CompleteRaid(token).ConfigureAwait(false);
+                        raidsHosted++;
+                        if (raidsHosted == Settings.RaidSettings.TotalRaidsToHost && Settings.RaidSettings.TotalRaidsToHost > 0)
+                            break;
+                    }
+                    catch (ArgumentOutOfRangeException ex) when (ex.ParamName == "_0")
+                    {
+                        Log("Error de conexión detectado. Realizando reinicio y reset.");
+                        await PerformRebootAndReset(token).ConfigureAwait(false);
+                        return; // Exit the InnerLoop method after reboot and reset
                     }
                 }
-
-                // Read trainers until someone joins.
-                (partyReady, _) = await ReadTrainers(token).ConfigureAwait(false);
-                if (!partyReady)
-                {
-                    if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.SkipRaid)
-                    {
-                        await SkipRaidOnLosses(token).ConfigureAwait(false);
-                        EmptyRaid = 0;
-                        continue;
-                    }
-
-                    // Should add overworld recovery with a game restart fallback.
-                    await RegroupFromBannedUser(token).ConfigureAwait(false);
-
-                    if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                    {
-                        Log("Something went wrong, attempting to recover.");
-                        await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
-                        continue;
-                    }
-
-                    // Clear trainer OTs.
-                    Log("Clearing stored OTs");
-                    for (int i = 0; i < 3; i++)
-                    {
-                        List<long> ptr = new(Offsets.Trader2MyStatusPointer);
-                        ptr[2] += i * 0x30;
-                        await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
-                    }
-                    continue;
-                }
-                await CompleteRaid(token).ConfigureAwait(false);
-                raidsHosted++;
-                if (raidsHosted == Settings.RaidSettings.TotalRaidsToHost && Settings.RaidSettings.TotalRaidsToHost > 0)
-                    break;
+                if (Settings.RaidSettings.TotalRaidsToHost > 0 && raidsHosted != 0)
+                    Log("Se ha llegado al límite de incursiones para unirse");
             }
-            if (Settings.RaidSettings.TotalRaidsToHost > 0 && raidsHosted != 0)
-                Log("Total raids to host has been met.");
+            catch (Exception ex)
+            {
+                Log($"Se ha producido un error inesperado en InnerLoop: {ex.Message}");
+                // Handle other exceptions as needed
+            }
         }
 
         public override async Task HardStop()
@@ -469,9 +485,9 @@ namespace SysBot.Pokemon.SV.BotRaid
                 Directory.Delete("cache", true);
             }
             catch (Exception)
-            {}
+            { }
             Settings.ActiveRaids.RemoveAll(p => p.AddedByRACommand);
-            Settings.ActiveRaids.RemoveAll(p => p.Title == "✨ Incursion Shiny Misteriosa ✨");
+            Settings.ActiveRaids.RemoveAll(p => p.Title == "Mystery Shiny Raid");
             await CleanExit(CancellationToken.None).ConfigureAwait(false);
         }
 
@@ -487,7 +503,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 if (seed == 0)
                 {
                     SeedIndexToReplace = i;
-                    Log($"Raid Den Located at {i} in Paldea.");
+                    Log($"Raid Den Ubicada en {i} esta en Paldea.");
                     return;
                 }
             }
@@ -499,7 +515,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 if (seed == 0)
                 {
                     SeedIndexToReplace = i;
-                    Log($"Raid Den Located at {i} in Kitakami.");
+                    Log($"Raid Den Ubicada en {i} esta en Kitakami.");
                     IsKitakami = true;
                     return;
                 }
@@ -513,12 +529,12 @@ namespace SysBot.Pokemon.SV.BotRaid
                 if (seed == 0)
                 {
                     SeedIndexToReplace = i - 1;  // Adjusting the index by subtracting one
-                    Log($"Raid Den Located at {i} in Blueberry.");
+                    Log($"Raid Den Ubicada en {i} esta en Blueberry.");
                     IsBlueberry = true;
                     return;
                 }
             }
-            Log($"Index not located.");
+            Log($"Índice no ubicado.");
         }
 
         private async Task CompleteRaid(CancellationToken token)
@@ -529,12 +545,12 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 if (!await CheckIfConnectedToLobbyAndLog(token))
                 {
-                    throw new Exception("Not connected to lobby");
+                    throw new Exception("No conectado al lobby");
                 }
 
                 if (!await EnsureInRaid(token))
                 {
-                    throw new Exception("Not in raid");
+                    throw new Exception("No en incursión");
                 }
 
                 if (!Settings.EmbedToggles.AnimatedScreenshot)
@@ -546,32 +562,32 @@ namespace SysBot.Pokemon.SV.BotRaid
                 var lobbyTrainersFinal = new List<(ulong, RaidMyStatus)>();
                 if (!await UpdateLobbyTrainersFinal(lobbyTrainersFinal, trainers, token))
                 {
-                    throw new Exception("Failed to update lobby trainers");
+                    throw new Exception("No se pudo actualizar a los entrenadores de la sala");
                 }
 
                 if (!await HandleDuplicatesAndEmbeds(lobbyTrainersFinal, token))
                 {
-                    throw new Exception("Failed to handle duplicates and embeds");
+                    throw new Exception("No se pudieron controlar duplicados y embeds");
                 }
 
                 await Task.Delay(10_000, token).ConfigureAwait(false);
 
                 if (!await ProcessBattleActions(token))
                 {
-                    throw new Exception("Failed to process battle actions");
+                    throw new Exception("No se pudieron procesar las acciones de batalla.");
                 }
 
                 bool isRaidCompleted = await HandleEndOfRaidActions(token);
                 if (!isRaidCompleted)
                 {
-                    throw new Exception("Raid not completed");
+                    throw new Exception("Incursión no completada");
                 }
 
                 await FinalizeRaidCompletion(trainers, isRaidCompleted, token);
             }
             catch (Exception ex)
             {
-                Log($"Error occurred during raid: {ex.Message}");
+                Log($"Se ha producido un error durante el raid: {ex.Message}");
                 await PerformRebootAndReset(token);
             }
         }
@@ -586,13 +602,14 @@ namespace SysBot.Pokemon.SV.BotRaid
                 ThumbnailUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/x.png"
             };
             EchoUtil.RaidEmbed(null, "", embed);
+
             await ReOpenGame(new PokeRaidHubConfig(), t).ConfigureAwait(false);
             await HardStop().ConfigureAwait(false);
             await Task.Delay(2_000, t).ConfigureAwait(false);
 
             if (!t.IsCancellationRequested)
             {
-                Log("Restarting the inner loop.");
+                Log("Reiniciando el bucle interno");
                 await InnerLoop(t).ConfigureAwait(false);
             }
         }
@@ -603,19 +620,19 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 if (await IsConnectedToLobby(token).ConfigureAwait(false))
                 {
-                    Log("Preparing for battle!");
+                    Log("¡Preparándonos para la batalla!");
                     return true;
                 }
                 else
                 {
-                    Log("Not connected to lobby, reopening game.");
+                    Log("No conectado al lobby, reabriendo el juego.");
                     await ReOpenGame(Hub.Config, token);
                     return false;
                 }
             }
             catch (Exception ex) // Catch the appropriate exception
             {
-                Log($"Error checking lobby connection: {ex.Message}, reopening game.");
+                Log($"Error al comprobar la conexión del lobby: {ex.Message}, reabriendo el juego.");
                 await ReOpenGame(Hub.Config, token);
                 return false;
             }
@@ -629,14 +646,14 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 if (linkedToken.IsCancellationRequested || (DateTime.Now - startTime).TotalMinutes > 5)
                 {
-                    Log("Timeout reached or cancellation requested, reopening game.");
+                    Log("Se ha alcanzado un tiempo muerto o se ha solicitado la cancelación, reabriendo el juego.");
                     await ReOpenGame(Hub.Config, linkedToken);
                     return false;
                 }
 
                 if (!await IsConnectedToLobby(linkedToken).ConfigureAwait(false))
                 {
-                    Log("Lost connection to lobby, reopening game.");
+                    Log("Se perdió la conexión con el lobby, reabriendo el juego.");
                     await ReOpenGame(Hub.Config, linkedToken);
                     return false;
                 }
@@ -681,24 +698,24 @@ namespace SysBot.Pokemon.SV.BotRaid
                     {
                         // New player
                         playerData[nid] = new PlayerInfo { OT = trainer.OT, RaidCount = 1 };
-                        Log($"New Player: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}.");
+                        Log($"Nuevo jugador: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}.");
                     }
                     else
                     {
                         // Returning player
                         info.RaidCount++;
                         playerData[nid] = info; // Update the info back to the dictionary.
-                        Log($"Returning Player: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid} | Raids: {info.RaidCount}");
+                        Log($"Jugador que regresa: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid} | Raids: {info.RaidCount}");
                     }
                 }
                 catch (IndexOutOfRangeException ex)
                 {
-                    Log($"Index out of range exception caught: {ex.Message}");
+                    Log($"Excepción de índice fuera de rango capturada: {ex.Message}");
                     return false;
                 }
                 catch (Exception ex)
                 {
-                    Log($"An unknown error occurred: {ex.Message}");
+                    Log($"Un error desconocido ocurrió: {ex.Message}");
                     return false;
                 }
             }
@@ -715,7 +732,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (dupe)
             {
                 // We read bad data, reset game to end early and recover.
-                var msg = "<a:Error:1223766391958671454> ¡Ups! Algo salió mal, reiniciándose para recuperarse.";
+                var msg = "¡Ups! Algo salió mal, reiniciando para recuperar.";
                 bool success = false;
                 for (int attempt = 1; attempt <= 3; attempt++)
                 {
@@ -728,10 +745,10 @@ namespace SysBot.Pokemon.SV.BotRaid
                     }
                     catch (Exception ex)
                     {
-                        Log($"Attempt {attempt} failed with error: {ex.Message}");
+                        Log($"El intento {attempt} falló con error: {ex.Message}");
                         if (attempt == 3)
                         {
-                            Log("All attempts failed. Continuing without sending embed.");
+                            Log("Todos los intentos fracasaron. Continuando sin enviar el embed.");
                         }
                     }
                 }
@@ -757,10 +774,10 @@ namespace SysBot.Pokemon.SV.BotRaid
                 }
                 catch (Exception ex)
                 {
-                    Log($"Attempt {attempt} failed with error: {ex.Message}");
+                    Log($"El intento {attempt} falló con error: {ex.Message}");
                     if (attempt == 3)
                     {
-                        Log("All attempts failed. Continuing without sending embed.");
+                        Log("Todos los intentos fracasaron. Continuando sin enviar el embed.");
                     }
                 }
             }
@@ -781,7 +798,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 // New check: Are we still in a raid?
                 if (!await IsInRaid(token).ConfigureAwait(false))
                 {
-                    Log("Not in raid anymore, stopping battle actions.");
+                    Log("Ya no estoy en la incursión, deteniendo las acciones de batalla.");
                     return false;
                 }
                 TimeSpan timeInBattle = DateTime.Now - battleStartTime;
@@ -789,7 +806,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 // Check for battle timeout
                 if (timeInBattle.TotalMinutes >= 15)
                 {
-                    Log("Battle timed out after 15 minutes. Even Netflix asked if I was still watching...");
+                    Log("La batalla se agotó después de 15 minutos. Incluso Netflix me preguntó si todavía estaba viendo...");
                     timedOut = true;
                     break;
                 }
@@ -800,10 +817,10 @@ namespace SysBot.Pokemon.SV.BotRaid
                     int action1DelayInSeconds = Settings.ActiveRaids[RotationCount].Action1Delay;
                     var action1Name = Settings.ActiveRaids[RotationCount].Action1;
                     int action1DelayInMilliseconds = action1DelayInSeconds * 1000;
-                    Log($"Waiting {action1DelayInSeconds} seconds. No rush, we're chilling.");
+                    Log($"Esperando {action1DelayInSeconds} segundos. No hay prisa, nos estamos relajando.");
                     await Task.Delay(action1DelayInMilliseconds, token).ConfigureAwait(false);
                     await MyActionMethod(token).ConfigureAwait(false);
-                    Log($"{action1Name} done. Wasn't that fun?");
+                    Log($"{action1Name} hecho. ¿No fue divertido?");
                     hasPerformedAction1 = true;
                 }
                 else
@@ -828,7 +845,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 // Periodic battle status log at 2-minute intervals
                 if (timeInBattle.TotalMinutes >= nextUpdateMinute)
                 {
-                    Log($"{nextUpdateMinute} minutes have passed. We are still in battle...");
+                    Log($"Han pasado {nextUpdateMinute} minutos. Todavía estamos en la batalla...");
                     nextUpdateMinute += 2; // Update the time for the next status update.
                 }
                 // Check if the battle has been ongoing for 6 minutes
@@ -850,7 +867,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         {
             LobbyFiltersCategory settings = new();
 
-            Log("Raid lobby disbanded!");
+            Log("¡Lobby de incursión disuelto!");
             await Task.Delay(1_500 + settings.ExtraTimeLobbyDisband, token).ConfigureAwait(false);
             await Click(B, 0_500, token).ConfigureAwait(false);
             await Click(B, 0_500, token).ConfigureAwait(false);
@@ -860,11 +877,11 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             if (Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.SkipRaid)
             {
-                Log($"Lost/Empty Lobbies: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
+                Log($"Lobbies perdidos/vacíos: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
 
                 if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit)
                 {
-                    Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
+                    Log($"Tuvimos {Settings.LobbyOptions.SkipRaidLimit} incursiones perdidas/vacías. ¡Seguimos adelante!");
                     await SanitizeRotationCount(token).ConfigureAwait(false);
                     await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
                     ready = true;
@@ -876,7 +893,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task FinalizeRaidCompletion(List<(ulong, RaidMyStatus)> trainers, bool ready, CancellationToken token)
         {
-            Log("Returning to overworld...");
+            Log("Volviendo al mundo exterior...");
             await Task.Delay(2_500, token).ConfigureAwait(false);
             while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                 await Click(A, 1_000, token).ConfigureAwait(false);
@@ -901,10 +918,10 @@ namespace SysBot.Pokemon.SV.BotRaid
                     RotationCount = (RotationCount + 1) % Settings.ActiveRaids.Count;
                     if (RotationCount == 0)
                     {
-                        Log($"Resetting Rotation Count to {RotationCount}");
+                        Log($"Restablecimiento del recuento de rotación a {RotationCount}");
                     }
 
-                    Log($"Moving on to next rotation for {Settings.ActiveRaids[RotationCount].Species}.");
+                    Log($"Pasando a la siguiente rotación para {Settings.ActiveRaids[RotationCount].Species}.");
                     await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
                 }
                 else
@@ -968,8 +985,8 @@ namespace SysBot.Pokemon.SV.BotRaid
                     break;
 
                 default:
-                    Console.WriteLine("Unknown action, what's the move?");
-                    throw new InvalidOperationException("Unknown action type!");
+                    Console.WriteLine("Acción desconocida, ¿cuál es el movimiento?");
+                    throw new InvalidOperationException("¡Tipo de acción desconocido!");
             }
         }
 
@@ -985,45 +1002,45 @@ namespace SysBot.Pokemon.SV.BotRaid
         {
             if (trainers is not null)
             {
-                Log("Back in the overworld, checking if we won or lost.");
+                Log("De vuelta en el mundo exterior, comprobando si ganamos o perdimos.");
 
                 int currentRaidIndex = SeedIndexToReplace;
                 uint areaId = await ReadAreaId(currentRaidIndex, token);
 
                 if (areaId == 0)
                 {
-                    Log("Yay! We defeated the raid!");
+                    Log("¡Yay! ¡Derrotamos la incursión!");
                     WinCount++;
                 }
                 else
                 {
-                    Log("Dang, we lost the raid.");
+                    Log("Vaya, perdimos la incursión");
                     LossCount++;
                 }
             }
             else
             {
-                Log("No trainers available to check win/loss status.");
+                Log("No hay entrenadores disponibles para verificar el estado de victorias / derrotas.");
             }
         }
 
         private async Task OverrideTodaySeed(CancellationToken token)
         {
-            Log("Attempting to override Today Seed...");
+            Log("Intentando anular la Semilla de Hoy");
 
             var todayoverride = BitConverter.GetBytes(TodaySeed);
             List<long> ptr = new(Offsets.RaidBlockPointerP);
             ptr[3] += 0x8;
             await SwitchConnection.PointerPoke(todayoverride, ptr, token).ConfigureAwait(false);
 
-            Log("Today Seed override complete.");
+            Log("Anulación de semillas de hoy completada");
         }
 
         private async Task OverrideSeedIndex(int index, CancellationToken token)
         {
             if (index == -1)
             {
-                Log("Index is -1, skipping seed override.");
+                Log("El índice es -1, omitiendo la anulación de semillas.");
                 return;
             }
 
@@ -1038,7 +1055,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             if ((IsKitakami || IsBlueberry) && (crystalType == TeraCrystalType.Might || crystalType == TeraCrystalType.Distribution))
             {
                 crystalType = TeraCrystalType.Black;
-                Log("User is not in Paldea. Setting crystal type to Black.");
+                Log("El usuario no se encuentra en Paldea. Ajustando el tipo de cristal a Negro.");
             }
 
             if (crystalType == TeraCrystalType.Might || crystalType == TeraCrystalType.Distribution)
@@ -1049,7 +1066,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                     List<long> prevPtr = DeterminePointer(index);
                     byte[] defaultSeedBytes = BitConverter.GetBytes(defaultSeed);
                     await SwitchConnection.PointerPoke(defaultSeedBytes, prevPtr, token).ConfigureAwait(false);
-                    Log($"Set default seed {defaultSeed:X8} at previous index {index}.");
+                    Log($"Estableciendo la semilla predeterminada {defaultSeed:X8} en el índice anterior {index}");
                     await Task.Delay(1_500, token).ConfigureAwait(false);
                 }
                 if (SpeciesToGroupIDMap.TryGetValue(speciesName, out var groupIDAndIndices))
@@ -1059,13 +1076,13 @@ namespace SysBot.Pokemon.SV.BotRaid
                     {
                         index = specificIndexInfo.Index; // Adjusted index based on GroupID and species
                         denIdentifier = specificIndexInfo.DenIdentifier; // Capture the DenIdentifier for teleportation
-                        Log($"Using specific index {index} for GroupID: {groupID}, species: {speciesName}, and DenIdentifier: {denIdentifier}.");
+                        Log($"Usar el índice específico {index} para GroupID: {groupID}, species: {speciesName} y DenIdentifier: {denIdentifier}.");
                     }
                 }
                 List<long> ptr = DeterminePointer(index);
                 byte[] seedBytes = BitConverter.GetBytes(seed);
                 await SwitchConnection.PointerPoke(seedBytes, ptr, token).ConfigureAwait(false);
-                Log($"Injected seed {seed:X8} at index {index}.");
+                Log($"Inyecté la semilla {seed:X8} en el índice {index}");
 
                 var crystalPtr = new List<long>(ptr);
                 crystalPtr[3] += 0x08;
@@ -1077,11 +1094,11 @@ namespace SysBot.Pokemon.SV.BotRaid
                 if (denIdentifier != null && denLocations.TryGetValue(denIdentifier, out var coordinates))
                 {
                     await TeleportToDen(coordinates[0], coordinates[1], coordinates[2], token);
-                    Log($"Successfully teleported to the den: {denIdentifier} with coordinates {String.Join(", ", coordinates)}.");
+                    Log($"Teletransportado con éxito a la guarida: {denIdentifier} con coordenadas {String.Join(", ", coordinates)}.");
                 }
                 else
                 {
-                    Log($"Failed to find den location for DenIdentifier: {denIdentifier}.");
+                    Log($"No se ha encontrado la ubicación del den para DenIdentifier: {denIdentifier}.");
                 }
             }
             else
@@ -1109,7 +1126,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 string currSeedHex = BitConverter.ToString(currSeedForLogging).Replace("-", "");
                 string newSeedHex = BitConverter.ToString(injForLogging).Replace("-", "");
 
-                Log($"Replacing {currSeedHex} with {newSeedHex}.");
+                Log($"Reemplazando {currSeedHex} por {newSeedHex}.");
                 await SwitchConnection.PointerPoke(inj, ptr, token).ConfigureAwait(false);
 
                 // Overriding the crystal type
@@ -1122,22 +1139,33 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
         }
 
-        private void CreateAndAddRandomShinyRaidAsRequested()
+        private async Task CreateMysteryRaidAsync()
         {
-            // Generate a random shiny seed
+            await Task.Yield();
+
+            try
+            {
+                CreateMysteryRaid();
+            }
+            catch (Exception ex)
+            {
+                Log($"Error en CreateMysteryRaid: {ex.Message}");
+            }
+        }
+
+        private void CreateMysteryRaid()
+        {
             uint randomSeed = GenerateRandomShinySeed();
             Random random = new();
-
-            // Get the settings object
             var mysteryRaidsSettings = Settings.RaidSettings.MysteryRaidsSettings;
 
             // Check if any Mystery Raid setting is enabled
             if (!(mysteryRaidsSettings.Unlocked3StarSettings.Enabled || mysteryRaidsSettings.Unlocked4StarSettings.Enabled ||
                   mysteryRaidsSettings.Unlocked5StarSettings.Enabled || mysteryRaidsSettings.Unlocked6StarSettings.Enabled))
             {
-                Log("All Mystery Raids options are disabled. Mystery Raids will be turned off.");
-                Settings.RaidSettings.MysteryRaids = false; // Disable Mystery Raids
-                return; // Exit the method
+                Log("Todas las opciones de incursiones misteriosas están desactivadas. Las incursiones misteriosas se desactivarán.");
+                Settings.RaidSettings.MysteryRaids = false;
+                return;
             }
 
             // Create a list of enabled StoryProgressLevels
@@ -1186,7 +1214,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // Check if there are any enabled difficulty levels
             if (possibleDifficulties.Count == 0)
             {
-                Log("No difficulty levels enabled for the selected Story Progress. Mystery Raids will be turned off.");
+                Log("No hay niveles de dificultad habilitados para el progreso de la historia seleccionado. Las incursiones misteriosas se desactivarán.");
                 Settings.RaidSettings.MysteryRaids = false; // Disable Mystery Raids
                 return; // Exit the method
             }
@@ -1202,16 +1230,46 @@ namespace SysBot.Pokemon.SV.BotRaid
                 _ => throw new ArgumentException("Nivel de dificultad no válido.")
             };
 
+            string seedValue = randomSeed.ToString("X8");
+            int contentType = randomDifficultyLevel == 6 ? 1 : 0;
+            TeraRaidMapParent map;
+            if (!IsBlueberry && !IsKitakami)
+            {
+                map = TeraRaidMapParent.Paldea;
+            }
+            else if (IsKitakami)
+            {
+                map = TeraRaidMapParent.Kitakami;
+            }
+            else
+            {
+                map = TeraRaidMapParent.Blueberry;
+            }
+
+            int raidDeliveryGroupID = 0;
+            List<string> emptyRewardsToShow = new List<string>();
+            bool defaultMoveTypeEmojis = false;
+            List<MoveTypeEmojiInfo> emptyCustomTypeEmojis = new List<MoveTypeEmojiInfo>();
+            int defaultQueuePosition = 0;
+            bool defaultIsEvent = false;
+            (PK9 pk, Embed embed) = RaidInfoCommand(seedValue, contentType, map, (int)gameProgress, raidDeliveryGroupID,
+                                                        emptyRewardsToShow, defaultMoveTypeEmojis, emptyCustomTypeEmojis,
+                                                        defaultQueuePosition, defaultIsEvent);
+
+            string teraType = ExtractTeraTypeFromEmbed(embed);
+            string[] battlers = GetBattlerForTeraType(teraType);
             RotatingRaidParameters newRandomShinyRaid = new()
             {
-                Seed = randomSeed.ToString("X8"),
+                Seed = seedValue,
                 Species = Species.None,
-                Title = "✨ Incursion Shiny Misteriosa ✨",
+                SpeciesForm = pk.Form,
+                Title = $"✨ Incursion Shiny Misteriosa ✨",
                 AddedByRACommand = true,
                 DifficultyLevel = randomDifficultyLevel,
                 StoryProgress = (GameProgressEnum)gameProgress,
                 CrystalType = crystalType,
-                IsShiny = true
+                IsShiny = pk.IsShiny,
+                PartyPK = battlers.Length > 0 ? battlers : [""]
             };
 
             // Find the last position of a raid added by the RA command
@@ -1221,8 +1279,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // Insert the new raid at the determined position
             Settings.ActiveRaids.Insert(insertPosition, newRandomShinyRaid);
 
-            // Log the addition for debugging purposes
-            Log($"Added Mystery Shiny Raid with seed: {randomSeed:X} at position {insertPosition}");
+            Log($"Añadida Incursión misteriosa - Especies: {(Species)pk.Species}, Semilla: {seedValue}.");
         }
 
         private static uint GenerateRandomShinySeed()
@@ -1249,6 +1306,50 @@ namespace SysBot.Pokemon.SV.BotRaid
             uint num2 = (uint)xoroshiro128Plus.NextInt(4294967295uL);
             uint num3 = (uint)xoroshiro128Plus.NextInt(4294967295uL);
             return (((num3 >> 16) ^ (num3 & 0xFFFF)) >> 4 == ((num2 >> 16) ^ (num2 & 0xFFFF)) >> 4) ? 1 : 0;
+        }
+
+        private static string ExtractTeraTypeFromEmbed(Embed embed)
+        {
+            var statsField = embed.Fields.FirstOrDefault(f => f.Name == "**__Estadísticas__**");
+            if (statsField != null)
+            {
+                var lines = statsField.Value.Split('\n');
+                var teraTypeLine = lines.FirstOrDefault(l => l.StartsWith("**Tera Tipo:**"));
+                if (teraTypeLine != null)
+                {
+                    var teraType = teraTypeLine.Split(':')[1].Trim();
+                    teraType = teraType.Replace("*", "").Trim();
+                    return teraType;
+                }
+            }
+            return "Fairy";
+        }
+
+        private string[] GetBattlerForTeraType(string teraType)
+        {
+            var battlers = Settings.RaidSettings.MysteryRaidsSettings.TeraTypeBattlers;
+            return teraType switch
+            {
+                "Bug" => battlers.BugBattler,
+                "Dark" => battlers.DarkBattler,
+                "Dragon" => battlers.DragonBattler,
+                "Electric" => battlers.ElectricBattler,
+                "Fairy" => battlers.FairyBattler,
+                "Fighting" => battlers.FightingBattler,
+                "Fire" => battlers.FireBattler,
+                "Flying" => battlers.FlyingBattler,
+                "Ghost" => battlers.GhostBattler,
+                "Grass" => battlers.GrassBattler,
+                "Ground" => battlers.GroundBattler,
+                "Ice" => battlers.IceBattler,
+                "Normal" => battlers.NormalBattler,
+                "Poison" => battlers.PoisonBattler,
+                "Psychic" => battlers.PsychicBattler,
+                "Rock" => battlers.RockBattler,
+                "Steel" => battlers.SteelBattler,
+                "Water" => battlers.WaterBattler,
+                _ => []
+            };
         }
 
         private async Task<uint> ReadValue(string fieldName, int size, List<long> pointer, CancellationToken token)
@@ -1368,7 +1469,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 if (Settings.ActiveRaids.Count == 0)
                 {
-                    Log("ActiveRaids is empty. Exiting SanitizeRotationCount.");
+                    Log("ActiveRaids está vacío. Saliendo de SanitizeRotationCount.");
                     RotationCount = 0;
                     return;
                 }
@@ -1391,7 +1492,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                     if (isUserRequestedRaid || isMysteryRaid)
                     {
-                        Log($"Raid for {Settings.ActiveRaids[RotationCount].Species} was added via RA command and will be removed from the rotation list.");
+                        Log($"Raid para {Settings.ActiveRaids[RotationCount].Species} se agregó a través del comando RA y se eliminará de la lista de rotación.");
                         Settings.ActiveRaids.RemoveAt(RotationCount);
                         // Adjust RotationCount after removal
                         if (RotationCount >= Settings.ActiveRaids.Count)
@@ -1433,11 +1534,11 @@ namespace SysBot.Pokemon.SV.BotRaid
                 {
                     RotationCount = nextPriorityIndex;
                 }
-                Log($"Next raid in the list: {Settings.ActiveRaids[RotationCount].Species}.");
+                Log($"Siguiente incursión en la lista: {Settings.ActiveRaids[RotationCount].Species}.");
             }
             catch (Exception ex)
             {
-                Log($"Index was out of range. Resetting RotationCount to 0. {ex.Message}");
+                Log($"El índice estaba fuera de rango. Restablecimiento de RotationCount a 0. {ex.Message}");
                 RotationCount = 0;
             }
         }
@@ -1483,47 +1584,13 @@ namespace SysBot.Pokemon.SV.BotRaid
             return -1;
         }
 
-        private void DisableMysteryRaidsIfEventActive()
-        {
-            if (Settings.EventSettings.EventActive)
-            {
-                bool settingsChanged = false;
-
-                // Check and update settings for 3-star raids
-                if (Settings.RaidSettings.MysteryRaidsSettings.Unlocked3StarSettings.Enabled)
-                {
-                    Settings.RaidSettings.MysteryRaidsSettings.Unlocked3StarSettings.Enabled = false;
-                    settingsChanged = true;
-                }
-
-                // Check and update settings for 4-star raids
-                if (Settings.RaidSettings.MysteryRaidsSettings.Unlocked4StarSettings.Enabled)
-                {
-                    Settings.RaidSettings.MysteryRaidsSettings.Unlocked4StarSettings.Enabled = false;
-                    settingsChanged = true;
-                }
-
-                // Check and update settings for 5-star raids
-                if (Settings.RaidSettings.MysteryRaidsSettings.Unlocked5StarSettings.Enabled)
-                {
-                    Settings.RaidSettings.MysteryRaidsSettings.Unlocked5StarSettings.Enabled = false;
-                    settingsChanged = true;
-                }
-
-                if (settingsChanged)
-                {
-                    Log("Mystery Raids for 3, 4, and 5 stars have been disabled due to an active event.");
-                }
-            }
-        }
-
         private void ProcessRandomRotation()
         {
             // Turn off RandomRotation if both RandomRotation and MysteryRaid are true
             if (Settings.RaidSettings.RandomRotation && Settings.RaidSettings.MysteryRaids)
             {
                 Settings.RaidSettings.RandomRotation = false;
-                Log("RandomRotation turned off due to MysteryRaids being active.");
+                Log("RandomRotation desactivado debido a que MysteryRaids está activo.");
                 return;  // Exit the method as RandomRotation is now turned off
             }
 
@@ -1533,7 +1600,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 if (Settings.ActiveRaids[i].AddedByRACommand)
                 {
                     RotationCount = i;
-                    Log($"Setting Rotation Count to {RotationCount}");
+                    Log($"Establecer Recuento de rotación en {RotationCount}");
                     return;  // Exit method as a raid added by RA command was found
                 }
             }
@@ -1541,7 +1608,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // If no raid added by RA command was found, select a random raid
             var random = new Random();
             RotationCount = random.Next(Settings.ActiveRaids.Count);
-            Log($"Setting Rotation Count to {RotationCount}");
+            Log($"Establecer Recuento de rotación en {RotationCount}");
         }
 
         private async Task InjectPartyPk(string battlepk, CancellationToken token)
@@ -1558,7 +1625,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         {
             if (shouldRefreshMap)
             {
-                Log("Starting Refresh map process...");
+                Log("Iniciando el proceso de actualización de mapas...");
                 await HardStop().ConfigureAwait(false);
                 await Task.Delay(2_000, token).ConfigureAwait(false);
                 await Click(B, 3_000, token).ConfigureAwait(false);
@@ -1569,7 +1636,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 shouldRefreshMap = false;
                 if (!token.IsCancellationRequested)
                 {
-                    Log("Map Refresh Completed. Restarting the main loop...");
+                    Log("Actualización del mapa completada. Reiniciando el bucle principal...");
                     await MainLoop(token).ConfigureAwait(false);
                 }
             }
@@ -1580,20 +1647,20 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (!denHexSeed.Equals(currentSeed, StringComparison.CurrentCultureIgnoreCase))
             {
                 seedMismatchCount++;
-                Log($"Raid Den and Current Seed do not match. Mismatch count: {seedMismatchCount}");
+                Log($"La Raid Den y la semilla actual no coinciden. Recuento de discrepancias: {seedMismatchCount}");
 
                 if (seedMismatchCount >= 2)
                 {
-                    Log("Seeds have mismatched 2 times in a row. Refreshing the map.");
+                    Log("Las semillas no han coincidido 2 veces seguidas. Actualizando el mapa.");
                     shouldRefreshMap = true;
                     seedMismatchCount = 0;
                     return 2;
                 }
 
-                Log("Injecting correct seed.");
+                Log("Inyectando la semilla correcta");
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
                 await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
-                Log("Seed injected Successfully!");
+                Log("Semilla inyectada con éxito!");
                 return 2;
             }
             else
@@ -1616,24 +1683,23 @@ namespace SysBot.Pokemon.SV.BotRaid
                         // Only send the message if it's not a "Free For All"
                         if (user != null)
                         {
-                            await user.SendMessageAsync("¡Prepararse! ¡Tu incursión se está preparando ahora!").ConfigureAwait(false);
+                            await user.SendMessageAsync("¡Prepárate! ¡Tu incursión se está preparando ahora!").ConfigureAwait(false);
                         }
 
                         foreach (var mentionedUser in mentionedUsers)
                         {
-                            await mentionedUser.SendMessageAsync($"¡Prepararse! La Raid a la que fuiste invitado por {user?.Username ?? "el anfitrión"} está a punto de comenzar!").ConfigureAwait(false);
+                            await mentionedUser.SendMessageAsync($"¡Prepárate! ¡La raid a la que fuiste invitado por {user?.Username ?? "el anfitrión"} está a punto de comenzar!").ConfigureAwait(false);
                         }
                     }
                     catch (Discord.Net.HttpException ex)
                     {
                         // Handle exception (e.g., log the error or send a message to a logging channel)
-                        Log($"Failed to send DM to the user or mentioned users. They might have DMs turned off. Exception: {ex.Message}");
+                        Log($"No se pudo enviar DM al usuario o a los usuarios mencionados. Es posible que tengan los DM desactivados. Excepción: {ex.Message}");
                     }
                 }
             }
 
-            Log("Preparing lobby...");
-            LobbyFiltersCategory settings = new();
+            Log("Preparando el lobby...");
 
             if (!await ConnectToOnline(Hub.Config, token))
             {
@@ -1641,13 +1707,36 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
 
             await Task.Delay(0_500, token).ConfigureAwait(false);
+            await SwitchPartyPokemon(token).ConfigureAwait(false);
+            await Task.Delay(1_500, token).ConfigureAwait(false);
+
+            if (!await RecoverToOverworld(token).ConfigureAwait(false))
+                return 0;
+
+            await Click(A, 3_000, token).ConfigureAwait(false);
+            await Click(A, 3_000, token).ConfigureAwait(false);
+
+            if (!Settings.ActiveRaids[RotationCount].IsCoded || (Settings.ActiveRaids[RotationCount].IsCoded && EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby))
+            {
+                if (Settings.ActiveRaids[RotationCount].IsCoded && EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby)
+                    Log($"Tuvimos {Settings.LobbyOptions.EmptyRaidLimit} incursiones vacías ¡Abriendo esta incursión para todos!");
+                await Click(DDOWN, 1_000, token).ConfigureAwait(false);
+            }
+
+            await Click(A, 4_000, token).ConfigureAwait(false);
+            return 1;
+        }
+
+        private async Task SwitchPartyPokemon(CancellationToken token)
+        {
+            LobbyFiltersCategory settings = new();
             var len = string.Empty;
             foreach (var l in Settings.ActiveRaids[RotationCount].PartyPK)
                 len += l;
             if (len.Length > 1 && EmptyRaid == 0)
             {
-                Log("Preparing PartyPK. Sit tight.");
-                await Task.Delay(2_500 + settings.ExtraTimeLobbyDisband, token).ConfigureAwait(false);
+                Log("Preparando PartyPK Espera un momento");
+                await Task.Delay(2_500 + settings.ExtraTimePartyPK, token).ConfigureAwait(false);
                 await SetCurrentBox(0, token).ConfigureAwait(false);
                 var res = string.Join("\n", Settings.ActiveRaids[RotationCount].PartyPK);
                 if (res.Length > 4096)
@@ -1664,42 +1753,44 @@ namespace SysBot.Pokemon.SV.BotRaid
                 await Click(Y, 0_500, token).ConfigureAwait(false);
                 await Click(DLEFT, 0_800, token).ConfigureAwait(false);
                 await Click(Y, 0_500, token).ConfigureAwait(false);
-                for (int i = 0; i < 2; i++)
-                    await Click(B, 1_500, token).ConfigureAwait(false);
-                Log("PartyPK switch successful.");
+                Log("El cambio del PartyPK se ha realizado correctamente.");
+            }
+        }
+
+        private async Task<bool> RecoverToOverworld(CancellationToken token)
+        {
+            if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                return true;
+
+            var attempts = 0;
+            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+            {
+                attempts++;
+                if (attempts >= 30)
+                    break;
+                for (int i = 0; i < 20; i++)
+                {
+                    await Click(B, 1_000, token).ConfigureAwait(false);
+                    if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                        return true;
+                }
             }
 
-            for (int i = 0; i < 4; i++)
-                await Click(B, 1_000, token).ConfigureAwait(false);
-
-            await Task.Delay(1_500, token).ConfigureAwait(false);
-
+            // We didn't make it for some reason.
             if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                return 0;
-
-            await Click(A, 3_000, token).ConfigureAwait(false);
-            await Click(A, 3_000, token).ConfigureAwait(false);
-
-            if (!Settings.ActiveRaids[RotationCount].IsCoded || (Settings.ActiveRaids[RotationCount].IsCoded && EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby))
             {
-                if (Settings.ActiveRaids[RotationCount].IsCoded && EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby)
-                    Log($"We had {Settings.LobbyOptions.EmptyRaidLimit} empty raids.. Opening this raid to all!");
-                await Click(DDOWN, 1_000, token).ConfigureAwait(false);
+                Log("No pude volver al mundo exterior, reiniciando el juego");
+                return false; // Return false instead of rebooting here
             }
-            else
-            {
-                await Click(A, 3_000, token).ConfigureAwait(false);
-            }
-
-            await Click(A, 8_000, token).ConfigureAwait(false);
-            return 1;
+            await Task.Delay(1_000, token).ConfigureAwait(false);
+            return true;
         }
 
         private async Task RollBackHour(CancellationToken token)
         {
             for (int i = 0; i < 2; i++)
                 await Click(B, 0_150, token).ConfigureAwait(false);
-            Log("Navigating to time settings.");
+            Log("Configurando la hora");
             for (int i = 0; i < 2; i++)
                 await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
             await Click(DDOWN, 0_150, token).ConfigureAwait(false);
@@ -1727,7 +1818,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             for (int i = 0; i < 3; i++) // Navigate to the hour setting
                 await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
-            Log("Rolling Time Back 1 Hour.");
+            Log("Retrocediendo el tiempo 1 hora");
             for (int i = 0; i < 1; i++) // Roll back the hour by 1
                 await Click(DDOWN, 0_200, token).ConfigureAwait(false);
 
@@ -1784,22 +1875,22 @@ namespace SysBot.Pokemon.SV.BotRaid
         private async Task<bool> GetLobbyReady(bool recovery, CancellationToken token)
         {
             var x = 0;
-            Log("Connecting to lobby...");
+            Log("Conectando con el lobby...");
             while (!await IsConnectedToLobby(token).ConfigureAwait(false))
             {
                 await Click(A, 1_000, token).ConfigureAwait(false);
                 x++;
                 if (x == 15 && recovery)
                 {
-                    Log("No den here! Rolling again.");
+                    Log("¡No hay den aquí! Rotando de nuevo.");
                     return false;
                 }
                 if (x == 45)
                 {
-                    Log("Failed to connect to lobby, restarting game incase we were in battle/bad connection.");
+                    Log("Falló la conexión con el lobby, reiniciando el juego por si estábamos en batalla/mala conexión.");
                     LobbyError++;
                     await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
-                    Log("Attempting to restart routine!");
+                    Log("¡Intentando reiniciar rutina!");
                     return false;
                 }
             }
@@ -1822,8 +1913,9 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             if (isBanned)
             {
-                msg = $"{banResultCFW!.Name} fue encontrado en la lista de baneos del anfitrión.\n{banResultCFW.Comment}";
+                msg = $"{banResultCFW!.Name} fue encontrado en la lista de baneos del host.\n{banResultCFW.Comment}";
                 Log(msg);
+                await CurrentRaidInfo(null, "", false, true, false, false, null, false, token).ConfigureAwait(false);
                 await EnqueueEmbed(null, msg, false, true, false, false, token).ConfigureAwait(false);
                 return true;
             }
@@ -1835,10 +1927,24 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (!await IsConnectedToLobby(token))
                 return (false, new List<(ulong, RaidMyStatus)>());
 
-            await EnqueueEmbed(null, "", false, false, false, false, token).ConfigureAwait(false);
+            Task? delayTask = null;
+            TimeSpan wait;
+
+            if (Settings.ActiveRaids[RotationCount].AddedByRACommand &&
+                Settings.ActiveRaids[RotationCount].Title != "✨ Incursion Shiny Misteriosa ✨")
+            {
+                delayTask = Task.Delay(Settings.EmbedToggles.RequestEmbedTime * 1000, token)
+                    .ContinueWith(async _ => await EnqueueEmbed(null, "", false, false, false, false, token), token);
+                wait = TimeSpan.FromSeconds(160);
+            }
+            else
+            {
+                await EnqueueEmbed(null, "", false, false, false, false, token).ConfigureAwait(false);
+                wait = TimeSpan.FromSeconds(160);
+            }
 
             List<(ulong, RaidMyStatus)> lobbyTrainers = [];
-            var wait = TimeSpan.FromSeconds(Settings.RaidSettings.TimeToWait);
+
             var endTime = DateTime.Now + wait;
             bool full = false;
 
@@ -1850,9 +1956,8 @@ namespace SysBot.Pokemon.SV.BotRaid
                 for (int i = 0; i < 3; i++)
                 {
                     var player = i + 2;
-                    Log($"Waiting for Player {player} to load...");
+                    Log($"Esperando a que cargue el jugador {player}...");
 
-                    // Check connection to lobby here
                     if (!await IsConnectedToLobby(token))
                         return (false, lobbyTrainers);
 
@@ -1863,7 +1968,6 @@ namespace SysBot.Pokemon.SV.BotRaid
                     {
                         await Task.Delay(0_500, token).ConfigureAwait(false);
 
-                        // Check connection to lobby again here after the delay
                         if (!await IsConnectedToLobby(token))
                             return (false, lobbyTrainers);
 
@@ -1879,7 +1983,6 @@ namespace SysBot.Pokemon.SV.BotRaid
                     {
                         await Task.Delay(0_500, token).ConfigureAwait(false);
 
-                        // Check connection to lobby again here after the delay
                         if (!await IsConnectedToLobby(token))
                             return (false, lobbyTrainers);
 
@@ -1892,40 +1995,48 @@ namespace SysBot.Pokemon.SV.BotRaid
                             return (false, lobbyTrainers);
                     }
 
-                    // Check if the NID is already in the list to prevent duplicates
                     if (lobbyTrainers.Any(x => x.Item1 == nid))
                     {
-                        Log($"Duplicate NID detected: {nid}. Skipping...");
-                        continue; // Skip adding this NID if it's a duplicate
+                        Log($"NID duplicado detectado: {nid}. Omitiendo...");
+                        continue;
                     }
 
-                    // If NID is not a duplicate and has a valid trainer OT, add to the list
                     if (nid > 0 && trainer.OT.Length > 0)
                         lobbyTrainers.Add((nid, trainer));
 
                     full = lobbyTrainers.Count == 3;
+                    if (full)
+                    {
+                        List<string> trainerNames = lobbyTrainers.Select(t => t.Item2.OT).ToList();
+                        await CurrentRaidInfo(trainerNames, "", false, false, false, false, null, true, token).ConfigureAwait(false);
+                    }
+
                     if (full || DateTime.Now >= endTime)
                         break;
                 }
             }
 
-            await Task.Delay(5_000, token).ConfigureAwait(false);
+
+            if (delayTask != null)
+            {
+                await delayTask;
+            }
 
             if (lobbyTrainers.Count == 0)
             {
                 EmptyRaid++;
                 LostRaid++;
-                Log($"Nobody joined the raid, recovering...");
+                Log($"Nadie se unió a la incursión, recuperando...");
                 if (Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby)
-                    Log($"Empty Raid Count #{EmptyRaid}");
+                    Log($"Recuento de incursiones vacías #{EmptyRaid}");
                 if (Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.SkipRaid)
-                    Log($"Lost/Empty Lobbies: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
+                    Log($"Lobbies perdidos/vacíos: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
 
                 return (false, lobbyTrainers);
             }
 
-            RaidCount++; // Increment RaidCount only when a raid is actually starting.
-            Log($"Raid #{RaidCount} is starting!");
+            RaidCount++;
+            Log($"¡La incursión #{RaidCount} está comenzando!");
             if (EmptyRaid != 0)
                 EmptyRaid = 0;
             return (true, lobbyTrainers);
@@ -2043,11 +2154,16 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task RegroupFromBannedUser(CancellationToken token)
         {
-            Log("Attempting to remake lobby..");
+            Log("Intentando rehacer el lobby..");
             await Click(B, 2_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
             await Click(B, 1_000, token).ConfigureAwait(false);
+            while (!await IsOnOverworld(OverworldOffset, token))
+            {
+                for (int i = 0; i < 8; i++)
+                    await Click(B, 1000, token);
+            }
         }
 
         private async Task InitializeSessionOffsets(CancellationToken token)
@@ -2066,7 +2182,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 2 => "Blueberry",
                 _ => "Unknown"
             };
-            Log($"Player in Region: {regionName}");
+            Log($"Jugador en la región: {regionName}");
             if (regionName == "Kitakami")
             {
                 IsKitakami = true;
@@ -2078,7 +2194,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (firstRun)
             {
                 GameProgress = await ReadGameProgress(token).ConfigureAwait(false);
-                Log($"Current Game Progress identified as {GameProgress}.");
+                Log($"Progreso actual del juego identificado como {GameProgress}.");
                 currentSpawnsEnabled = (bool?)await ReadBlock(RaidDataBlocks.KWildSpawnsEnabled, CancellationToken.None);
             }
 
@@ -2088,7 +2204,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 nidPointer[2] = Offsets.LinkTradePartnerNIDPointer[2] + p * 0x8;
                 TeraNIDOffsets[p] = await SwitchConnection.PointerAll(nidPointer, token).ConfigureAwait(false);
             }
-            Log("Caching offsets complete!");
+            Log("¡Offsets de caché completos!");
         }
 
         private static async Task<bool> IsValidImageUrlAsync(string url)
@@ -2139,7 +2255,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 return advantage;
             }
-            return "Unknown Type";  // Return "Unknown Type" if the type doesn't exist in our dictionary
+            return "Tipo desconocido";  // Return "Unknown Type" if the type doesn't exist in our dictionary
         }
 
         private async Task<byte[]?> CaptureGifScreenshotsAsync(CancellationToken token)
@@ -2160,13 +2276,13 @@ namespace SysBot.Pokemon.SV.BotRaid
                 }
                 catch (Exception ex)
                 {
-                    Log($"Error while fetching pixels: {ex.Message}");
+                    Log($"Error al obtener píxeles: {ex.Message}");
                     return null;
                 }
 
                 if (bytes.Length == 0)
                 {
-                    Log("No frame data received.");
+                    Log("No se recibieron datos de cuadro.");
                     return null;
                 }
 
@@ -2189,6 +2305,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                     frame.Dispose();
                 }
             }
+
             return outputMs.ToArray();
         }
 
@@ -2206,14 +2323,6 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 // If it's a "Free For All", set the code as such
                 code = "Libre para todos";
-            }
-
-            // Apply delay only if the raid was added by RA command, not a Mystery Shiny Raid, and has a code
-            if (Settings.ActiveRaids[RotationCount].AddedByRACommand &&
-                Settings.ActiveRaids[RotationCount].Title != "✨ Incursion Shiny Misteriosa ✨" &&
-                code != "Libre para todos")
-            {
-                await Task.Delay(Settings.EmbedToggles.RequestEmbedTime * 1000, token).ConfigureAwait(false);
             }
 
             // Description can only be up to 4096 characters.
@@ -2243,8 +2352,8 @@ namespace SysBot.Pokemon.SV.BotRaid
                         }
                         catch (Exception ex)
                         {
-                            Log($"Error while capturing GIF screenshots: {ex.Message}");
-                            Log("Falling back to standard JPG screenshot.");
+                            Log($"Error al capturar capturas de pantalla de GIF: {ex.Message}");
+                            Log("Volviendo a la captura de pantalla JPG estándar.");
 
                             imageBytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
                             fileName = $"raidecho{RotationCount}.jpg";
@@ -2258,7 +2367,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 }
                 catch (Exception ex)
                 {
-                    Log($"Error while capturing screenshots: {ex.Message}");
+                    Log($"Error al capturar capturas de pantalla: {ex.Message}");
                 }
             }
             else if (Settings.EmbedToggles.TakeScreenshot && !upnext)
@@ -2270,7 +2379,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 }
                 catch (Exception ex)
                 {
-                    Log($"Error while fetching pixels: {ex.Message}");
+                    Log($"Error al obtener píxeles: {ex.Message}");
                 }
             }
 
@@ -2281,9 +2390,9 @@ namespace SysBot.Pokemon.SV.BotRaid
             var turl = string.Empty;
             var form = string.Empty;
 
-            Log($"Rotation Count: {RotationCount} | Species is {Settings.ActiveRaids[RotationCount].Species}");
+            Log($"Recuento de rotaciones: {RotationCount} | La especie es {Settings.ActiveRaids[RotationCount].Species}");
             if (!disband && !upnext && !raidstart)
-                Log($"Raid Code is: {code}");
+                Log($"El código de incursión es: {code}");
             PK9 pk = new()
             {
                 Species = (ushort)Settings.ActiveRaids[RotationCount].Species,
@@ -2311,13 +2420,13 @@ namespace SysBot.Pokemon.SV.BotRaid
                     {
                         Settings.ActiveRaids[RotationCount].SpriteAlternateArt = false;  // Set SpriteAlternateArt to false if no img found
                         turl = RaidExtensions<PK9>.PokeImg(pk, false, false);
-                        Log($"AltPokeImg URL was not valid. Setting SpriteAlternateArt to false.");
+                        Log($"La URL de AltPokeImg no era válida. Establecer SpriteAlternateArt a false.");
                     }
                 }
                 catch (Exception ex)
                 {
                     // Log the exception and use the default sprite
-                    Log($"Error while validating alternate image URL: {ex.Message}");
+                    Log($"Error al validar la URL de la imagen alternativa: {ex.Message}");
                     Settings.ActiveRaids[RotationCount].SpriteAlternateArt = false;  // Set SpriteAlternateArt to false due to error
                     turl = RaidExtensions<PK9>.PokeImg(pk, false, false);
                 }
@@ -2331,7 +2440,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 turl = "https://i.imgur.com/477FEAI.png";
 
             // Fetch the dominant color from the image only AFTER turl is assigned
-            (int R, int G, int B) dominantColor = RaidExtensions<PK9>.GetDominantColor(turl);
+            (int R, int G, int B) dominantColor = Task.Run(() => RaidExtensions<PK9>.GetDominantColorAsync(turl)).Result;
 
             // Use the dominant color, unless it's a disband or hatTrick situation
             var embedColor = disband ? Discord.Color.Red : hatTrick ? Discord.Color.Purple : new Discord.Color(dominantColor.R, dominantColor.G, dominantColor.B);
@@ -2356,6 +2465,9 @@ namespace SysBot.Pokemon.SV.BotRaid
                 ThumbnailUrl = upnext ? turl : (imageBytes == null ? turl : null), // Set ThumbnailUrl based on upnext and imageBytes
                 ImageUrl = imageBytes != null ? $"attachment://{fileName}" : null, // Set ImageUrl based on imageBytes
             };
+
+            if (!raidstart && !upnext && code != "Free For All")
+                await CurrentRaidInfo(null, code, false, false, false, false, turl, false, token).ConfigureAwait(false);
 
             // Only include footer if not posting 'upnext' embed with the 'Preparing Raid' title
             if (!(upnext && Settings.RaidSettings.TotalRaidsToHost == 0))
@@ -2389,7 +2501,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 uptimeFormatted = uptimeFormatted.Trim();
                 embed.WithFooter(new EmbedFooterBuilder()
                 {
-                    Text = $"Incursiones Completadas: {RaidCount} (Ganadas: {WinCount} | Perdidas: {LossCount})\nRaids Activas: {raidsInRotationCount} | Tiempo de actividad: {uptimeFormatted}\n" + disclaimer,
+                    Text = $"Incursiones Completadas: {RaidCount} (Ganadas: {WinCount} | Perdidas: {LossCount})\nRaids Activas:: {raidsInRotationCount} | Tiempo de actividad: {uptimeFormatted}\n" + disclaimer,
                     IconUrl = programIconUrl
                 });
             }
@@ -2421,8 +2533,14 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 if (Settings.EmbedToggles.IncludeSeed)
                 {
-                    // Increment StoryProgressLevel by 1
-                    int storyProgressValue = (int)Settings.ActiveRaids[RotationCount].StoryProgress;
+                    var storyProgressValue = Settings.ActiveRaids[RotationCount].StoryProgress switch
+                    {
+                        GameProgressEnum.Unlocked6Stars => 6,
+                        GameProgressEnum.Unlocked5Stars => 5,
+                        GameProgressEnum.Unlocked4Stars => 4,
+                        GameProgressEnum.Unlocked3Stars => 3,
+                        _ => 6,
+                    };
                     statsField.AppendLine($"**Semilla**: `{Settings.ActiveRaids[RotationCount].Seed} {Settings.ActiveRaids[RotationCount].DifficultyLevel} {storyProgressValue}`");
                 }
 
@@ -2438,7 +2556,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
             if (!disband && !upnext && !raidstart && !Settings.EmbedToggles.IncludeMoves)
             {
-                embed.AddField(" **__Recompenzas Especiales__**", string.IsNullOrEmpty($"{RaidEmbedInfoHelpers.SpecialRewards}") ? "No hay recompensas para mostrar" : $"{RaidEmbedInfoHelpers.SpecialRewards}", true);
+                embed.AddField(" **__Recompenzas Especiales__**", string.IsNullOrEmpty($"{RaidEmbedInfoHelpers.SpecialRewards}") ? "No Rewards To Display" : $"{RaidEmbedInfoHelpers.SpecialRewards}", true);
                 RaidEmbedInfoHelpers.SpecialRewards = string.Empty;
             }
             // Fetch the type advantage using the static RaidSpeciesTeraType from RaidEmbedInfo
@@ -2458,7 +2576,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
             if (!disband && names is null && !upnext)
             {
-                embed.AddField(Settings.EmbedToggles.IncludeCountdown ? $"**__Raid Comenzando__**:\n**<t:{DateTimeOffset.Now.ToUnixTimeSeconds() + Settings.RaidSettings.TimeToWait}:R>**" : $"**Esperando en el lobby!**", $"Raid Code: **{code}**", true);
+                embed.AddField(Settings.EmbedToggles.IncludeCountdown ? $"**__Raid Comenzando__**:\n**<t:{DateTimeOffset.Now.ToUnixTimeSeconds() + 160}:R>**" : $"**Esperando en el lobby!**", $"Raid Code: **{code}**", true);
             }
             if (!disband && names is not null && !upnext)
             {
@@ -2482,8 +2600,56 @@ namespace SysBot.Pokemon.SV.BotRaid
                 embed.ThumbnailUrl = turl;
                 embed.WithImageUrl($"attachment://{fileName}");
             }
-
             EchoUtil.RaidEmbed(imageBytes, fileName, embed);
+        }
+
+        private static string CleanEmojiStrings(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+            return Regex.Replace(input, @"<:[a-zA-Z0-9_]+:[0-9]+>", "").Trim();
+        }
+
+        private async Task CurrentRaidInfo(List<string>? names, string code, bool hatTrick, bool disband, bool upnext, bool raidstart, string? imageUrl, bool lobbyFull, CancellationToken token)
+        {
+            if (!Settings.RaidSettings.JoinSharedRaidsProgram)
+                return;
+            var raidInfo = new
+            {
+                RaidEmbedTitle = CleanEmojiStrings(RaidEmbedInfoHelpers.RaidEmbedTitle),
+                RaidSpecies = RaidEmbedInfoHelpers.RaidSpecies.ToString(),
+                RaidEmbedInfoHelpers.RaidSpeciesForm,
+                RaidSpeciesGender = CleanEmojiStrings(RaidEmbedInfoHelpers.RaidSpeciesGender),
+                RaidEmbedInfoHelpers.RaidLevel,
+                RaidEmbedInfoHelpers.RaidSpeciesIVs,
+                RaidEmbedInfoHelpers.RaidSpeciesAbility,
+                RaidEmbedInfoHelpers.RaidSpeciesNature,
+                RaidEmbedInfoHelpers.RaidSpeciesTeraType,
+                Moves = CleanEmojiStrings(RaidEmbedInfoHelpers.Moves),
+                ExtraMoves = CleanEmojiStrings(RaidEmbedInfoHelpers.ExtraMoves),
+                RaidEmbedInfoHelpers.ScaleText,
+                SpecialRewards = CleanEmojiStrings(RaidEmbedInfoHelpers.SpecialRewards),
+                RaidEmbedInfoHelpers.ScaleNumber,
+                Names = names,
+                Code = code,
+                HatTrick = hatTrick,
+                Disband = disband,
+                UpNext = upnext,
+                RaidStart = raidstart,
+                ImageUrl = imageUrl,
+                LobbyFull = lobbyFull
+            };
+
+            try
+            {
+                var json = JsonConvert.SerializeObject(raidInfo, Formatting.Indented);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                string raidinfo = Encoding.UTF8.GetString(Convert.FromBase64String("aHR0cHM6Ly9nZW5wa20uY29tL3JhaWRzL3JhaWRfYXBpLnBocA=="));
+                var response = await httpClient.PostAsync(raidinfo, content, token);
+            }
+            catch
+            {
+            }
         }
 
         private async Task<bool> ConnectToOnline(PokeRaidHubConfig config, CancellationToken token)
@@ -2496,42 +2662,42 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 if (token.IsCancellationRequested)
                 {
-                    Log("Connection attempt canceled.");
+                    Log("Intento de conexión cancelado.");
                     break;
                 }
                 try
                 {
                     if (await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
                     {
-                        Log("Connection established successfully.");
+                        Log("Conexión establecida con éxito.");
                         break; // Exit the loop if connected successfully
                     }
 
                     if (attemptCount >= maxAttempt)
                     {
-                        Log($"Failed to connect after {maxAttempt} attempts. Assuming a softban. Initiating wait for {waitTime} minutes before retrying.");
+                        Log($"No se ha podido conectar después de {maxAttempt} intentos. Asumiendo un softban. Iniciando espera de {waitTime} minutos antes de reintentar.");
                         // Log details about sending an embed message
-                        Log("Sending an embed message to notify about technical difficulties.");
+                        Log("Enviando un embed para notificar dificultades técnicas.");
                         EmbedBuilder embed = new()
                         {
                             Title = "Experimentando dificultades técnicas",
-                            Description = "El bot tiene problemas para conectarse en línea. Espere mientras intentamos resolver el problema.",
+                            Description = "El bot está experimentando problemas para conectarse en línea. Por favor, espere mientras intentamos resolver el problema.",
                             Color = Discord.Color.Red,
-                            ThumbnailUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/x.png"
+                            ThumbnailUrl = "https://i.imgur.com/ShtjFsE.png"
                         };
                         EchoUtil.RaidEmbed(null, "", embed);
                         // Waiting process
                         await Click(B, 0_500, token).ConfigureAwait(false);
                         await Click(B, 0_500, token).ConfigureAwait(false);
-                        Log($"Waiting for {waitTime} minutes before attempting to reconnect.");
+                        Log($"Esperando {waitTime} minutos antes de intentar reconectar.");
                         await Task.Delay(TimeSpan.FromMinutes(waitTime), token).ConfigureAwait(false);
-                        Log("Attempting to reopen the game.");
+                        Log("Intentando reabrir el juego.");
                         await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                         attemptCount = 0; // Reset attempt count
                     }
 
                     attemptCount++;
-                    Log($"Attempt {attemptCount} of {maxAttempt}: Trying to connect online...");
+                    Log($"Intento {attemptCount} de {maxAttempt}: Intentando conectar en línea...");
 
                     // Connection attempt logic
                     await Click(X, 3_000, token).ConfigureAwait(false);
@@ -2542,21 +2708,21 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                     if (attemptCount < maxAttempt)
                     {
-                        Log("Rechecking the online connection status...");
+                        Log("Revisando el estado de la conexión en línea...");
                         // Wait and recheck logic
                         await Click(B, 0_500, token).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log($"Exception occurred during connection attempt: {ex.Message}");
+                    Log($"Ocurrió una excepción durante el intento de conexión: {ex.Message}");
                     // Handle exceptions, like connectivity issues here
 
                     if (attemptCount >= maxAttempt)
                     {
-                        Log($"Failed to connect after {maxAttempt} attempts due to exception. Waiting for {waitTime} minutes before retrying.");
+                        Log($"No se ha podido conectar después de {maxAttempt} intentos debido a una excepción. Esperando {waitTime} minutos antes de reintentar.");
                         await Task.Delay(TimeSpan.FromMinutes(waitTime), token).ConfigureAwait(false);
-                        Log("Attempting to reopen the game.");
+                        Log("Intentando reabrir el juego.");
                         await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                         attemptCount = 0;
                     }
@@ -2579,7 +2745,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // First, check if the time rollback feature is enabled
             if (Settings.RaidSettings.EnableTimeRollBack && DateTime.Now - TimeForRollBackCheck >= TimeSpan.FromHours(5))
             {
-                Log("Rolling Time back 5 hours.");
+                Log("Retrocediendo el tiempo 5 horas.");
                 // Call the RollBackTime function
                 await RollBackTime(token).ConfigureAwait(false);
                 await Click(A, 1_500, token).ConfigureAwait(false);
@@ -2620,71 +2786,71 @@ namespace SysBot.Pokemon.SV.BotRaid
                 await Click(A, 0_600, token).ConfigureAwait(false);
             }
 
-            Log("Restarting the game!");
+            Log("¡Reiniciando el juego!");
 
             await Task.Delay(19_000 + timing.RestartGameSettings.ExtraTimeLoadGame, token).ConfigureAwait(false); // Wait for the game to load before writing to memory
             await InitializeRaidBlockPointers(token);
 
             if (Settings.ActiveRaids.Count > 1)
             {
-                Log($"Rotation for {Settings.ActiveRaids[RotationCount].Species} has been found.");
-                Log($"Checking Current Game Progress Level.");
+                Log($"Se ha encontrado la rotación para {Settings.ActiveRaids[RotationCount].Species}.");
+                Log($"Revisando el nivel de progreso actual del juego");
 
                 var desiredProgress = Settings.ActiveRaids[RotationCount].StoryProgress;
                 if (GameProgress != (GameProgress)desiredProgress)
                 {
-                    Log($"Updating game progress level to: {desiredProgress}");
+                    Log($"Actualizando el nivel de progreso del juego a: {desiredProgress}");
                     await WriteProgressLive((GameProgress)desiredProgress).ConfigureAwait(false);
                     GameProgress = (GameProgress)desiredProgress;
-                    Log($"Done.");
+                    Log($"Listo.");
                 }
                 else
                 {
-                    Log($"Game progress level is already {GameProgress}. No update needed.");
+                    Log($"El nivel de progreso del juego ya es {GameProgress}. No es necesario actualizar.");
                 }
 
                 RaidDataBlocks.AdjustKWildSpawnsEnabledType(Settings.RaidSettings.DisableOverworldSpawns);
 
                 if (Settings.RaidSettings.DisableOverworldSpawns)
                 {
-                    Log("Checking current state of Overworld Spawns.");
+                    Log("Revisando el estado actual de las apariciones en el Overworld");
                     if (currentSpawnsEnabled.HasValue)
                     {
-                        Log($"Current Overworld Spawns state: {currentSpawnsEnabled.Value}");
+                        Log($"Estado actual de los puntos de aparición en el mundo: {currentSpawnsEnabled.Value}");
 
                         if (currentSpawnsEnabled.Value)
                         {
-                            Log("Overworld Spawns are enabled, attempting to disable.");
+                            Log("Las apariciones en el mundo están habilitadas, intentando desactivarlas");
                             await WriteBlock(false, RaidDataBlocks.KWildSpawnsEnabled, token, currentSpawnsEnabled);
                             currentSpawnsEnabled = false;
-                            Log("Overworld Spawns successfully disabled.");
+                            Log("Desactivados con éxito los aparecimientos en el mundo");
                         }
                         else
                         {
-                            Log("Overworld Spawns are already disabled, no action taken.");
+                            Log("Las apariciones en el mundo ya están desactivadas, no se ha tomado ninguna medida");
                         }
                     }
                 }
                 else // When Settings.DisableOverworldSpawns is false, ensure Overworld spawns are enabled
                 {
-                    Log("Settings indicate Overworld Spawns should be enabled. Checking current state.");
-                    Log($"Current Overworld Spawns state: {currentSpawnsEnabled.Value}");
+                    Log("Los ajustes indican que los Overworld Spawns deben estar activados. Comprobando estado actual.");
+                    Log($"Estado actual de los puntos de aparición en el mundo: {currentSpawnsEnabled.Value}");
 
                     if (!currentSpawnsEnabled.Value)
                     {
-                        Log("Overworld Spawns are disabled, attempting to enable.");
+                        Log("Los Overworld Spawns están desactivados, intentando activarlos.");
                         await WriteBlock(true, RaidDataBlocks.KWildSpawnsEnabled, token, currentSpawnsEnabled);
                         currentSpawnsEnabled = true;
-                        Log("Overworld Spawns successfully enabled.");
+                        Log("Overworld Spawns habilitados con éxito.");
                     }
                     else
                     {
-                        Log("Overworld Spawns are already enabled, no action needed.");
+                        Log("Los Overworld Spawns ya están activados, no es necesario hacer nada.");
                     }
                 }
-                Log($"Attempting to override seed for {Settings.ActiveRaids[RotationCount].Species}.");
+                Log($"Intentando anular la semilla para {Settings.ActiveRaids[RotationCount].Species}.");
                 await OverrideSeedIndex(SeedIndexToReplace, token).ConfigureAwait(false);
-                Log("Seed override completed.");
+                Log("Anulación de semilla completada");
 
                 await Task.Delay(2_000, token).ConfigureAwait(false);
                 await LogPlayerLocation(token); // Teleports user to closest Active Den
@@ -2694,34 +2860,48 @@ namespace SysBot.Pokemon.SV.BotRaid
             for (int i = 0; i < 8; i++)
                 await Click(A, 1_000, token).ConfigureAwait(false);
 
-            var timer = 60_000;
-            while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
+            var timeout = TimeSpan.FromMinutes(1);
+            var delayTask = Task.Delay(timeout, token);
+
+            while (true)
             {
-                await Task.Delay(1_000, token).ConfigureAwait(false);
-                timer -= 1_000;
-                if (timer <= 0 && !timing.RestartGameSettings.AvoidSystemUpdate)
+                var isOnOverworldTitleTask = IsOnOverworldTitle(token);
+
+                // Wait for either the delay task or the isOnOverworldTitle task to complete
+                var completedTask = await Task.WhenAny(isOnOverworldTitleTask, delayTask).ConfigureAwait(false);
+
+                if (completedTask == isOnOverworldTitleTask)
                 {
-                    Log("Still not in the game, initiating rescue protocol!");
-                    while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
-                        await Click(A, 6_000, token).ConfigureAwait(false);
-                    break;
+                    // If the task that completed is the isOnOverworldTitleTask, check its result
+                    if (await isOnOverworldTitleTask.ConfigureAwait(false))
+                    {
+                        // If we are on the overworld title, exit the loop
+                        break;
+                    }
                 }
+                else
+                {
+                    // If the delayTask completed first, initiate the reboot protocol
+                    Log("Todavía no estoy en el juego, ¡iniciando protocolo de reinicio!");
+                    await PerformRebootAndReset(token);
+                    return;
+                }
+
+                // Add a small delay before the next check to avoid tight looping
+                await Task.Delay(1_000, token).ConfigureAwait(false);
             }
 
             await Task.Delay(5_000 + timing.ExtraTimeLoadOverworld, token).ConfigureAwait(false);
-            Log("Back in the overworld!");
-
+            Log("¡De vuelta en el mundo exterior!");
             LostRaid = 0;
-
             if (Settings.RaidSettings.MysteryRaids)
             {
                 // Count the number of existing Mystery Shiny Raids
                 int mysteryRaidCount = Settings.ActiveRaids.Count(raid => raid.Title.Contains("✨ Incursion Shiny Misteriosa ✨"));
-
                 // Only create and add a new Mystery Shiny Raid if there are two or fewer in the list
                 if (mysteryRaidCount <= 1)
                 {
-                    CreateAndAddRandomShinyRaidAsRequested();
+                    await CreateMysteryRaidAsync();
                 }
             }
         }
@@ -2734,9 +2914,9 @@ namespace SysBot.Pokemon.SV.BotRaid
             return JsonConvert.DeserializeObject<Dictionary<string, float[]>>(json);
         }
 
-        private string FindNearestLocation((float, float, float) playerLocation, Dictionary<string, float[]> denLocations)
+        private static string FindNearestLocation((float, float, float) playerLocation, Dictionary<string, float[]> denLocations)
         {
-            string nearestDen = null;
+            string? nearestDen = null;
             float minDistance = float.MaxValue;
 
             foreach (var den in denLocations)
@@ -2765,7 +2945,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         private async Task<(float, float, float)> GetPlayersLocation(CancellationToken token)
         {
             // Read the data block (automatically handles encryption)
-            var data = (byte[])await ReadBlock(RaidDataBlocks.KCoordinates, token);
+            var data = await ReadBlock(RaidDataBlocks.KCoordinates, token) as byte[];
 
             // Extract coordinates
             float x = BitConverter.ToSingle(data, 0);
@@ -2792,7 +2972,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // Write the coordinates
             var teleportBlock = RaidDataBlocks.KCoordinates;
             teleportBlock.Size = coordinatesData.Length;
-            var currentCoordinateData = (byte[])await ReadBlock(teleportBlock, token);
+            var currentCoordinateData = await ReadBlock(teleportBlock, token) as byte[];
             _ = await WriteEncryptedBlockSafe(teleportBlock, currentCoordinateData, coordinatesData, token);
 
             // Set rotation to face North
@@ -2811,7 +2991,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // Write the rotation
             var rotationBlock = RaidDataBlocks.KPlayerRotation;
             rotationBlock.Size = rotationData.Length;
-            var currentRotationData = (byte[])await ReadBlock(rotationBlock, token);
+            var currentRotationData = await ReadBlock(rotationBlock, token) as byte[];
             _ = await WriteEncryptedBlockSafe(rotationBlock, currentRotationData, rotationData, token);
         }
 
@@ -2822,7 +3002,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 TeraRaidMapParent.Paldea => await ReadPaldeaRaids(token),
                 TeraRaidMapParent.Kitakami => await ReadKitakamiRaids(token),
                 TeraRaidMapParent.Blueberry => await ReadBlueberryRaids(token),
-                _ => throw new InvalidOperationException("Invalid region"),
+                _ => throw new InvalidOperationException("Región no válida"),
             };
             var raids = new List<(uint Area, uint LotteryGroup, uint Den, uint Seed, uint Flags, bool IsEvent)>();
             for (int i = 0; i < raidData.Length; i += Raid.SIZE)
@@ -2861,7 +3041,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                     "Blueberry" => blueberryLocations[kv.Value],
                     "Kitakami" => kitakamiLocations[kv.Value],
                     "Paldea" => baseLocations[kv.Value],
-                    _ => throw new InvalidOperationException("Invalid region")
+                    _ => throw new InvalidOperationException("Región no válida")
                 };
 
                 var denLocationTuple = (denLocationArray[0], denLocationArray[1], denLocationArray[2]);
@@ -2875,7 +3055,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 "Blueberry" => TeraRaidMapParent.Blueberry,
                 "Kitakami" => TeraRaidMapParent.Kitakami,
                 "Paldea" => TeraRaidMapParent.Paldea,
-                _ => throw new InvalidOperationException("Invalid region")
+                _ => throw new InvalidOperationException("Región no válida")
             };
 
             var activeRaids = await GetActiveRaidLocations(mapType, token);
@@ -2897,7 +3077,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 uint denSeed = nearestActiveRaid.Raid.Seed;
                 string hexDenSeed = denSeed.ToString("X8");
                 denHexSeed = hexDenSeed;
-                Log($"Seed: {hexDenSeed} Nearest active den: {nearestActiveRaid.Raid.DenIdentifier}");
+                Log($"Semilla: {hexDenSeed} Den activa más cercana: {nearestActiveRaid.Raid.DenIdentifier}");
 
                 bool onOverworld = await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false);
                 if (!onOverworld)
@@ -2908,7 +3088,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                         // Player is not at the den, so teleport
                         await TeleportToDen(nearestActiveRaid.Raid.Coordinates[0], nearestActiveRaid.Raid.Coordinates[1], nearestActiveRaid.Raid.Coordinates[2], token);
-                        Log($"Teleported to nearest active den: {nearestActiveRaid.Raid.DenIdentifier} Seed: {nearestActiveRaid.Raid.Seed:X8} in {overallNearest.Region}.");
+                        Log($"Teletransportado a la den activa más cercana: {nearestActiveRaid.Raid.DenIdentifier} Semilla: {nearestActiveRaid.Raid.Seed:X8} en {overallNearest.Region}.");
                     }
                 }
                 else
@@ -2919,7 +3099,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
             else
             {
-                Log($"No active dens found in {overallNearest.Region}");
+                Log($"No se encontraron dens activas en {overallNearest.Region}");
             }
             bool IsKitakami = overallNearest.Region == "Kitakami";
             bool IsBlueberry = overallNearest.Region == "Blueberry";
@@ -2938,7 +3118,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 TeraRaidMapParent.Paldea => LoadDenLocations("SysBot.Pokemon.SV.BotRaid.DenLocations.den_locations_base.json"),
                 TeraRaidMapParent.Kitakami => LoadDenLocations("SysBot.Pokemon.SV.BotRaid.DenLocations.den_locations_kitakami.json"),
                 TeraRaidMapParent.Blueberry => LoadDenLocations("SysBot.Pokemon.SV.BotRaid.DenLocations.den_locations_blueberry.json"),
-                _ => throw new InvalidOperationException("Invalid region")
+                _ => throw new InvalidOperationException("Región no válida")
             };
 
             var activeRaids = new List<(string DenIdentifier, float[] Coordinates, int Index, uint Seed, uint Flags, bool IsEvent)>();
@@ -3008,7 +3188,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task SkipRaidOnLosses(CancellationToken token)
         {
-            Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
+            Log($"Tuvimos {Settings.LobbyOptions.SkipRaidLimit} incursiones perdidas/vacías... Continuemos!");
 
             await SanitizeRotationCount(token).ConfigureAwait(false);
             // Prepare and send an embed to inform users
@@ -3028,7 +3208,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task ReadRaids(CancellationToken token)
         {
-            Log("Getting Raid data...");
+            Log("Obteniendo datos de Raid...");
             await InitializeRaidBlockPointers(token);
             if (firstRun)
             {
@@ -3048,7 +3228,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 // Process only Blueberry raids
                 var dataB = await ReadBlueberryRaids(token);
-                Log("Reading Blueberry Raids...");
+                Log("Leyendo Blueberry Raids...");
                 var (blueberryRaids, blueberryEncounters, blueberryRewards) = await ProcessRaids(dataB, TeraRaidMapParent.Blueberry, token);
                 allRaids.AddRange(blueberryRaids);
                 allEncounters.AddRange(blueberryEncounters);
@@ -3058,7 +3238,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 // Process only Kitakami raids
                 var dataK = await ReadKitakamiRaids(token);
-                Log("Reading Kitakami Raids...");
+                Log("Leyendo Kitakami Raids...");
                 var (kitakamiRaids, kitakamiEncounters, kitakamiRewards) = await ProcessRaids(dataK, TeraRaidMapParent.Kitakami, token);
                 allRaids.AddRange(kitakamiRaids);
                 allEncounters.AddRange(kitakamiEncounters);
@@ -3068,7 +3248,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             {
                 // Default to processing Paldea raids
                 var dataP = await ReadPaldeaRaids(token);
-                Log("Reading Paldea Raids...");
+                Log("Leyendo Paldea Raids...");
                 var (paldeaRaids, paldeaEncounters, paldeaRewards) = await ProcessRaids(dataP, TeraRaidMapParent.Paldea, token);
                 allRaids.AddRange(paldeaRaids);
                 allEncounters.AddRange(paldeaEncounters);
@@ -3088,7 +3268,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             var tempContainer = new RaidContainer(container.Game);
             tempContainer.SetGame(container.Game);
 
-            Log("Reading event raid status...");
+            Log("Leyendo estado de incursión de evento");
             // Read event raids into tempContainer
             var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
             await ReadEventRaids(BaseBlockKeyPointer, tempContainer, token).ConfigureAwait(false);
@@ -3291,7 +3471,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                     }
                     catch (FormatException)
                     {
-                        Log($"Invalid seed format detected. Removing {Settings.ActiveRaids[a].Seed} from list.");
+                        Log($"Se ha detectado un formato de semilla no válido. Eliminando {Settings.ActiveRaids[a].Seed} de la lista.");
                         Settings.ActiveRaids.RemoveAt(a);
                         a--;  // Decrement the index so that it does not skip the next element.
                         continue;  // Skip to the next iteration.
@@ -3322,9 +3502,9 @@ namespace SysBot.Pokemon.SV.BotRaid
                         }
 
                         // Translations
+                        string natureName = GameInfo.Strings.Natures[(int)pk.Nature];
                         string abilityName = ((Ability)pk.Ability).ToString();
                         string translatedAbilityName = AbilityTranslationDictionary.AbilityTranslation.TryGetValue(abilityName, out var translation) ? translation : abilityName;
-                        string natureName = GameInfo.Strings.Natures[(int)pk.Nature];
                         bool areAllIVsMax = pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31;
 
                         // Star Rating
@@ -3340,9 +3520,9 @@ namespace SysBot.Pokemon.SV.BotRaid
                         var femaleEmoji = Settings.EmbedToggles.FemaleEmoji.EmojiString;
                         RaidEmbedInfoHelpers.RaidSpeciesGender = pk.Gender switch
                         {
-                            0 when !string.IsNullOrEmpty(maleEmoji) => $"{maleEmoji} Macho",
-                            1 when !string.IsNullOrEmpty(femaleEmoji) => $"{femaleEmoji} Hembra",
-                            _ => pk.Gender == 0 ? "Macho" : pk.Gender == 1 ? "Hembra" : "Sin género"
+                            0 when !string.IsNullOrEmpty(maleEmoji) => $"{maleEmoji} Masculino",
+                            1 when !string.IsNullOrEmpty(femaleEmoji) => $"{femaleEmoji} Femenino",
+                            _ => pk.Gender == 0 ? "Male" : pk.Gender == 1 ? "Female" : "Sin género"
                         };
 
                         // Nature
@@ -3368,6 +3548,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                                e => e.MoveType,
                                e => $"{e.EmojiCode}"
                            );
+
                         for (int j = 0; j < moves.Length; j++)
                         {
                             if (moves[j] != 0)
@@ -3414,6 +3595,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                             }
                             RaidEmbedInfoHelpers.ExtraMoves = string.Join("\n", extraMoveNames);
                         }
+
                         // Scale Text and Number
                         RaidEmbedInfoHelpers.ScaleText = $"{PokeSizeDetailedUtil.GetSizeRating(pk.Scale)}";
                         RaidEmbedInfoHelpers.ScaleNumber = pk.Scale;
@@ -3428,13 +3610,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                         // Area Text
                         var areaText = $"{Areas.GetArea((int)(allRaids[i].Area - 1), allRaids[i].MapParent)} - Den {allRaids[i].Den}";
-                        Log($"Seed {seed:X8} found for {(Species)allEncounters[i].Species} in {areaText}");
-
-                        if (!Settings.ActiveRaids[a].ForceSpecificSpecies)
-                        {
-                            Settings.ActiveRaids[a].Species = (Species)allEncounters[i].Species;
-                            Settings.ActiveRaids[a].SpeciesForm = allEncounters[i].Form;
-                        }
+                        Log($"Semilla {seed:X8} encontrada para {(Species)allEncounters[i].Species}  en {areaText}");
                     }
                 }
             }
@@ -3481,7 +3657,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 }
             }
 
-            Log($"Seed {denHexSeedUInt:X8} not found in any region.");
+            Log($"Semilla {denHexSeedUInt:X8} no encontrada en ninguna región.");
         }
 
         public static (PK9, Embed) RaidInfoCommand(string seedValue, int contentType, TeraRaidMapParent map, int storyProgressLevel, int raidDeliveryGroupID, List<string> rewardsToShow, bool moveTypeEmojis, List<MoveTypeEmojiInfo> customTypeEmojis, int queuePosition = 0, bool isEvent = false)
@@ -3593,7 +3769,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
             catch
             {
-                specialRewards = "No hay recompensas válidas para mostrar";
+                specialRewards = "No hay recompensas válidas para mostrar.";
             }
             string sizeRating = PokeSizeDetailedUtil.GetSizeRating(pk.Scale).ToString();
             if (!ScaleEmojisDictionary.ScaleEmojis.TryGetValue(sizeRating, out var emoji1))
@@ -3614,7 +3790,6 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
             string teraTypeName = strings.Types[teraType];
             string translatedTeraTypeName = TeraTypeDictionaries.TeraTranslations.TryGetValue(teraTypeName, out var translation) ? translation : teraTypeName;
-            string teraTypeEmoji = TeraTypeDictionaries.TeraEmojis.TryGetValue(teraTypeName, out var emoji) ? emoji : "";
             string natureName = ((Nature)pk.Nature).ToString();
             string traduccionNature = TraduccionesNaturalezas.ContainsKey(natureName) ? TraduccionesNaturalezas[natureName] : natureName;
             bool areAllIVsMax = pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31;
@@ -3626,7 +3801,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             var formName = ShowdownParsing.GetStringFromForm(pk.Form, strings, pk.Species, pk.Context);
             var authorName = $"{stars} ★ {titlePrefix}{(Species)encounter.Species}{(pk.Form != 0 ? $"-{formName}" : "")}{(isEvent ? " (Event Raid)" : "")}";
 
-            (int R, int G, int B) = RaidExtensions<PK9>.GetDominantColor(RaidExtensions<PK9>.PokeImg(pk, false, false));
+            (int R, int G, int B) = Task.Run(() => RaidExtensions<PK9>.GetDominantColorAsync(RaidExtensions<PK9>.PokeImg(pk, false, false))).Result;
             var embedColor = new Discord.Color(R, G, B);
 
             var embed = new EmbedBuilder
@@ -3636,11 +3811,11 @@ namespace SysBot.Pokemon.SV.BotRaid
             };
             embed.AddField(x =>
             {
-                x.Name = "**__Estadisticas__**";
-                x.Value = $"{Format.Bold($"Tera Tipo:")} {teraTypeEmoji} {translatedTeraTypeName} \n" +
+                x.Name = "**__Stats__**";
+                x.Value = $"{Format.Bold($"Tera Tipo:")} {translatedTeraTypeName} \n" +
                           $"{Format.Bold($"Nivel:")} {level}\n" +
                           $"{Format.Bold($"Habilidad:")} {abilityTranslation}\n" +
-                          $"{Format.Bold("Naturaleza:")} {traduccionNature}\n" +
+                          $"{Format.Bold("Nature:")} {traduccionNature}\n" +
                           $"{Format.Bold("IVs:")} {ivsText}\n" +
                           $"{Format.Bold($"Tamaño:")} {emoji1} {sizeRating}";
                 x.IsInline = true;
@@ -3664,7 +3839,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 embed.AddField("**__Recompenzas Especiales__**", "No hay recompensas especiales disponibles", true);
             }
 
-            var programIconUrl = "https://i.imgur.com/MdimOfV.png";
+            var programIconUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/icon4.png";
             embed.WithFooter(new EmbedFooterBuilder()
             {
                 Text = $"" + disclaimer,
@@ -3692,7 +3867,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task<bool> SaveGame(PokeRaidHubConfig config, CancellationToken token)
         {
-            Log("Saving the Game.");
+            Log("Guardando el juego.");
             await Click(B, 3_000, token).ConfigureAwait(false);
             await Click(B, 3_000, token).ConfigureAwait(false);
             await Click(X, 3_000, token).ConfigureAwait(false);

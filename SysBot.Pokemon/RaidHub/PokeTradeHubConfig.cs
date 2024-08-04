@@ -9,16 +9,16 @@ namespace SysBot.Pokemon
         private const string BotRaid = nameof(BotRaid);
         private const string Integration = nameof(Integration);
 
-        [Category(Operation), Description("Add extra time for slower Switches.")]
+        [Category(Operation), Description("Añade tiempo extra para cambios más lentos.")]
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public TimingSettings Timings { get; set; } = new();
 
-        [Category(BotRaid), Description("Name of the Discord Bot the Program is Running. This will Title the window for easier recognition. Requires program restart.")]
-        [DisplayName("This Bot's Name is...")]
+        [Category(BotRaid), Description("Nombre del bot de Discord que está ejecutando el programa. Esto le dará título a la ventana para que sea más fácil reconocerlo. Requiere reiniciar el programa.")]
+        [DisplayName("El nombre de este bot es...")]
         public string BotName { get; set; } = string.Empty;
 
         [Browsable(false)]
-        [Category(Integration), Description("Users Theme Option Choice.")]
+        [Category(Integration), Description("Elección de opción de tema de los usuarios.")]
         public string ThemeOption { get; set; } = string.Empty;
 
         [Category(BotRaid)]

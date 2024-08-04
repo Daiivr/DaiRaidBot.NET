@@ -14,35 +14,30 @@ namespace SysBot.Pokemon
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
+        
+        public override string ToString() => "Configuración de incursión rotativa (solo Sc/Vi)";
+        [DisplayName("Lista de incursiones activas")]
 
-        public override string ToString() => "Rotating Raid Settings (Sc/Vi Only)";
-        [DisplayName("Active Raid List")]
-
-        [Category(Hosting), Description("Your Active Raid List lives here.")]
+        [Category(Hosting), Description("Tu lista de incursiones activas se encuentra aquí.")]
         public List<RotatingRaidParameters> ActiveRaids { get; set; } = new();
 
-        [DisplayName("Raid Settings")]
+        [DisplayName("Configuración de incursión")]
         public RotatingRaidSettingsCategory RaidSettings { get; set; } = new RotatingRaidSettingsCategory();
 
-        [DisplayName("Discord Embed Settings")]
+        [DisplayName("Configuración de embeds de Discord")]
         public RotatingRaidPresetFiltersCategory EmbedToggles { get; set; } = new RotatingRaidPresetFiltersCategory();
 
-        [DisplayName("Might/Dist Event Settings")]
+        [DisplayName("Configuración del lobby de incursión")]
 
-        [Category(Hosting), Description("Settings related to Events."), Browsable(true)]
-        public EventSettingsCategory EventSettings { get; set; } = new();
-
-        [DisplayName("Raid Lobby Settings")]
-
-        [Category(Hosting), Description("Lobby Options"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+        [Category(Hosting), Description("Opciones del lobby"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public LobbyFiltersCategory LobbyOptions { get; set; } = new();
 
-        [DisplayName("Banned Raiders List")]
+        [DisplayName("Lista de Raiders Baneados")]
 
-        [Category(Hosting), Description("Users NIDs here are banned raiders.")]
+        [Category(Hosting), Description("Los NIDs de los usuarios que estan aquí son raiders baneados")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
 
-        [DisplayName("Random Settings")]
+        [DisplayName("Configuraciones randoms")]
         public MiscSettingsCategory MiscSettings { get; set; } = new MiscSettingsCategory();
 
         [Browsable(false)]
@@ -56,50 +51,50 @@ namespace SysBot.Pokemon
         {
             public override string ToString() => $"{Title}";
 
-            [DisplayName("Enable Raid?")]
+            [DisplayName("¿Habilitar Raid?")]
             public bool ActiveInRotation { get; set; } = true;
 
-            [DisplayName("Species")]
+            [DisplayName("Especies")]
             public Species Species { get; set; } = Species.None;
 
-            [DisplayName("Force Selected Species?")]
+            [DisplayName("¿Forzar especies seleccionadas?")]
             public bool ForceSpecificSpecies { get; set; } = false;
 
-            [DisplayName("Pokemon Form Number")]
+            [DisplayName("Número de forma de Pokémon")]
             public int SpeciesForm { get; set; } = 0;
 
-            [DisplayName("Is Pokemon Shiny?")]
+            [DisplayName("¿Pokemon es Shiny?")]
             public bool IsShiny { get; set; } = true;
 
-            [DisplayName("Crystal Type")]
+            [DisplayName("Tipo de cristal")]
             public TeraCrystalType CrystalType { get; set; } = TeraCrystalType.Base;
 
-            [DisplayName("Make Raid Coded?")]
+            [DisplayName("¿Hacer la raid coded?")]
             public bool IsCoded { get; set; } = true;
 
-            [DisplayName("Seed")]
+            [DisplayName("Semilla")]
             public string Seed { get; set; } = "0";
 
-            [DisplayName("Star Count")]
+            [DisplayName("Número de estrellas")]
             public int DifficultyLevel { get; set; } = 0;
 
-            [DisplayName("Game Progress")]
+            [DisplayName("Progreso del juego")]
             [TypeConverter(typeof(EnumConverter))]
             public GameProgressEnum StoryProgress { get; set; } = GameProgressEnum.Unlocked6Stars;
 
-            [DisplayName("Raid Battler (Showdown Format)")]
+            [DisplayName("Raid Battler (Formato Showdown)")]
             public string[] PartyPK { get; set; } = [];
 
-            [DisplayName("Action Bot Should Use")]
+            [DisplayName("Acción que debe usar el bot")]
             public Action1Type Action1 { get; set; } = Action1Type.GoAllOut;
 
-            [DisplayName("Action Delay (In Seconds)")]
+            [DisplayName("Retraso de la acción (en segundos)")]
             public int Action1Delay { get; set; } = 5;
 
-            [DisplayName("Group ID  (Event Raids Only)")]
+            [DisplayName("ID de grupo (sólo Raids de evento)")]
             public int GroupID { get; set; } = 0;
 
-            [DisplayName("Embed Title")]
+            [DisplayName("Título del Embed")]
             public string Title { get; set; } = string.Empty;
 
             [Browsable(false)]
@@ -129,14 +124,62 @@ namespace SysBot.Pokemon
             public List<SocketUser> MentionedUsers { get; set; } = [];
         }
 
-        [Category(Hosting), TypeConverter(typeof(CategoryConverter<EventSettingsCategory>))]
-        public class EventSettingsCategory
+        public class TeraTypeBattlers
         {
-            public override string ToString() => "Event Settings";
+            public override string ToString() => $"Define a tus Raid Battlers";
+            [DisplayName("Bug Battler")]
+            public string[] BugBattler { get; set; } = [];
 
-            [DisplayName("Are Events Active? (Paldea Only)")]
-            [Category(Hosting), Description("Set to \"true\" when events are active to properly process level 7 (event) and level 5 (distribution) raids.")]
-            public bool EventActive { get; set; } = false;
+            [DisplayName("Dark Battler")]
+            public string[] DarkBattler { get; set; } = [];
+
+            [DisplayName("Dragon Battler")]
+            public string[] DragonBattler { get; set; } = [];
+
+            [DisplayName("Electric Battler")]
+            public string[] ElectricBattler { get; set; } = [];
+
+            [DisplayName("Fairy Battler")]
+            public string[] FairyBattler { get; set; } = [];
+
+            [DisplayName("Fighting Battler")]
+            public string[] FightingBattler { get; set; } = [];
+
+            [DisplayName("Fire Battler")]
+            public string[] FireBattler { get; set; } = [];
+
+            [DisplayName("Flying Battler")]
+            public string[] FlyingBattler { get; set; } = [];
+
+            [DisplayName("Ghost Battler")]
+            public string[] GhostBattler { get; set; } = [];
+
+            [DisplayName("Grass Battler")]
+            public string[] GrassBattler { get; set; } = [];
+
+            [DisplayName("Ground Battler")]
+            public string[] GroundBattler { get; set; } = [];
+
+            [DisplayName("Ice Battler")]
+            public string[] IceBattler { get; set; } = [];
+
+            [DisplayName("Normal Battler")]
+            public string[] NormalBattler { get; set; } = [];
+
+            [DisplayName("Poison Battler")]
+            public string[] PoisonBattler { get; set; } = [];
+
+            [DisplayName("Psychic Battler")]
+            public string[] PsychicBattler { get; set; } = [];
+
+            [DisplayName("Rock Battler")]
+            public string[] RockBattler { get; set; } = [];
+
+            [DisplayName("Steel Battler")]
+            public string[] SteelBattler { get; set; } = [];
+
+            [DisplayName("Water Battler")]
+            public string[] WaterBattler { get; set; } = [];
         }
 
         [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidSettingsCategory>))]
@@ -145,21 +188,21 @@ namespace SysBot.Pokemon
             private bool _randomRotation = false;
             private bool _mysteryRaids = false;
 
-            public override string ToString() => "Raid Settings";
+            public override string ToString() => "Configuración de incursión";
 
-            [DisplayName("Generate Active Raids from file?")]
-            [Category(Hosting), Description("When enabled, the bot will attempt to auto-generate your raids from the \"raidsv.txt\" file on botstart.")]
+            [DisplayName("¿Generar incursiones activas a partir de un archivo?")]
+            [Category(Hosting), Description("Cuando se activa, el bot intentará autogenerar tus incursiones desde el archivo \"raidsv.txt\" en el botstart.")]
             public bool GenerateRaidsFromFile { get; set; } = true;
 
-            [DisplayName("Save Active Raids to File On Exit?")]
-            [Category(Hosting), Description("When enabled, the bot will save your current ActiveRaids list to the \"savedSeeds.txt\" file on bot stop.")]
+            [DisplayName("¿Guardar incursiones activas en un archivo al salir?")]
+            [Category(Hosting), Description("Cuando está activado, el bot guardará tu lista actual de ActiveRaids en el archivo \"savedSeeds.txt\" al parar el bot.")]
             public bool SaveSeedsToFile { get; set; } = true;
 
-            [DisplayName("Total Raids To Host Before Stopping")]
-            [Category(Hosting), Description("Enter the total number of raids to host before the bot automatically stops. Default is 0 to ignore this setting.")]
+            [DisplayName("Total de incursiones a acoger antes de parar")]
+            [Category(Hosting), Description("Introduce el número total de incursiones a realizar antes de que el bot se detenga automáticamente. Por defecto es 0 para ignorar este ajuste.")]
             public int TotalRaidsToHost { get; set; } = 0;
 
-            [DisplayName("Rotate Raid List in Random Order?"), Category(Hosting), Description("When enabled, the bot will randomly pick a Raid to run, while keeping requests prioritized.")]
+            [DisplayName("¿Rotar la lista de incursiones en orden aleatorio?"), Category(Hosting), Description("Cuando está activado, el bot elegirá aleatoriamente un Raid para ejecutarlo, manteniendo las peticiones priorizadas.")]
             public bool RandomRotation
             {
                 get => _randomRotation;
@@ -171,7 +214,7 @@ namespace SysBot.Pokemon
                 }
             }
 
-            [DisplayName("Turn Mystery Raids On?"), Category(Hosting), Description("When true, bot will add random shiny seeds to queue. Only User Requests and Mystery Raids will be ran.")]
+            [DisplayName("¿Activar las incursiones misteriosas?"), Category(Hosting), Description("Cuando es true, el bot añadirá semillas brillantes aleatorias a la cola. Solo se ejecutarán las Peticiones de Usuario y las Incursiones Misteriosas.")]
             public bool MysteryRaids
             {
                 get => _mysteryRaids;
@@ -183,57 +226,57 @@ namespace SysBot.Pokemon
                 }
             }
 
-            [DisplayName("Mystery Raid Settings")]
-            [Category("MysteryRaids"), Description("Settings specific to Mystery Raids.")]
+            [DisplayName("Ajustes de la Incursión Misteriosa")]
+            [Category("MysteryRaids"), Description("Ajustes específicos de las incursiones misteriosas.")]
             public MysteryRaidsSettings MysteryRaidsSettings { get; set; } = new MysteryRaidsSettings();
 
-            [DisplayName("Disable User Raid Requests?")]
-            [Category(Hosting), Description("When true, the bot will not allow user requested raids and will inform them that this setting is on.")]
+            [DisplayName("¿Desactivar las peticiones de incursión de los usuarios?")]
+            [Category("Hosting"), Description("Cuando es verdadero, el bot no permitirá incursiones solicitadas por el usuario y les informará de que esta configuración está activada.")]
             public bool DisableRequests { get; set; } = false;
 
-            [DisplayName("Allow Private User Raid Requests?")]
-            [Category(Hosting), Description("When true, the bot will allow private raids.")]
+            [DisplayName("¿Permitir peticiones de incursión de usuarios privados?")]
+            [Category("Hosting"), Description("Cuando es verdadero, el bot permitirá incursiones privadas.")]
             public bool PrivateRaidsEnabled { get; set; } = true;
 
-            [DisplayName("Limit Users Requests")]
-            [Category(Hosting), Description("Limit the number of requests a user can issue.  Set to 0 to disable.\nCommands: $lr <number>")]
+            [DisplayName("Limitar las peticiones de los usuarios")]
+            [Category("Hosting"), Description("Limitar el número de peticiones que un usuario puede realizar. Configura a 0 para desactivar.\nComandos: $lr <número>")]
             public int LimitRequests { get; set; } = 0;
 
-            [DisplayName("Limit Requests Time")]
-            [Category(Hosting), Description("Define the time (in minutes) the user must wait for requests once LimitRequests number is reached.  Set to 0 to disable.\nCommands: $lrt <number in minutes>")]
+            [DisplayName("Tiempo de espera para nuevas peticiones")]
+            [Category("Hosting"), Description("Define el tiempo (en minutos) que el usuario debe esperar para hacer nuevas peticiones una vez alcanzado el número de peticiones limitadas. Configura a 0 para desactivar.\nComandos: $lrt <número en minutos>")]
             public int LimitRequestsTime { get; set; } = 0;
 
-            [DisplayName("Limit Request User Error Message")]
-            [Category(Hosting), Description("Custom message to display when a user reaches their request limit.")]
-            public string LimitRequestMsg { get; set; } = "If you'd like to bypass this limit, please [describe how to get the role].";
+            [DisplayName("Mensaje de error por límite de peticiones")]
+            [Category("Hosting"), Description("Mensaje personalizado para mostrar cuando un usuario alcanza su límite de peticiones.")]
+            public string LimitRequestMsg { get; set; } = "Si desea evitar este límite, [describe cómo obtener el rol].";
 
-            [DisplayName("Users/Roles that can bypass Limit Requests")]
-            [Category(Hosting), Description("Dictionary of user and role IDs with names that can bypass request limits.\nCommands: $alb @Role or $alb @User")]
+            [DisplayName("Usuarios/Roles que pueden saltarse el límite de peticiones")]
+            [Category("Hosting"), Description("Diccionario de IDs de usuarios y roles con nombres que pueden saltarse los límites de peticiones.\nComandos: $alb @Role o $alb @User")]
             public Dictionary<ulong, string> BypassLimitRequests { get; set; } = new Dictionary<ulong, string>();
 
-            [DisplayName("Prevent Battles in Overworld?")]
-            [Category(FeatureToggle), Description("Prevent attacks.  When true, Overworld Spawns (Pokémon) are disabled on the next seed injection.  When false, Overworld Spawns (Pokémon) are enabled on the next seed injection.")]
+            [DisplayName("¿Prevenir batallas en el mundo abierto?")]
+            [Category("FeatureToggle"), Description("Prevenir ataques. Cuando es verdadero, los Spawns del mundo abierto (Pokémon) están deshabilitados en la próxima inyección de semilla. Cuando es falso, los Spawns del mundo abierto (Pokémon) están habilitados en la próxima inyección de semilla.")]
             public bool DisableOverworldSpawns { get; set; } = true;
 
-            [DisplayName("Start Raid in X seconds")]
-            [Category(Hosting), Description("Minimum amount of seconds to wait before starting a raid.")]
-            public int TimeToWait { get; set; } = 90;
-
-            [DisplayName("Keep Current Day Seed?")]
-            [Category(Hosting), Description("When enabled, the bot will inject the current day seed to tomorrow's day seed.")]
+            [DisplayName("¿Mantener la semilla del día actual?")]
+            [Category("Hosting"), Description("Cuando está habilitado, el bot inyectará la semilla del día actual a la semilla del día de mañana.")]
             public bool KeepDaySeed { get; set; } = true;
 
-            [DisplayName("Prevent Day Changes?")]
-            [Category(FeatureToggle), Description("When enabled, the bot will roll back the time by 5 hours to keep your day from changing.  Be sure that when you start the bot the Switch Time is past 12:01am and before 7:00pm.")]
+            [DisplayName("¿Prevenir cambios de día?")]
+            [Category("FeatureToggle"), Description("Cuando está habilitado, el bot retrocederá el tiempo 5 horas para evitar que tu día cambie. Asegúrate de que cuando inicies el bot la hora del Switch esté entre las 12:01am y las 7:00pm.")]
             public bool EnableTimeRollBack { get; set; } = true;
+
+            [DisplayName("Unirse al programa de incursiones compartidas")]
+            [Category("Hosting"), Description("Habilitar para unirse al programa de incursiones compartidas.")]
+            public bool JoinSharedRaidsProgram { get; set; } = true;
         }
 
         public class MoveTypeEmojiInfo
         {
-            [Description("The type of move.")]
+            [Description("El tipo de movimiento.")]
             public MoveType MoveType { get; set; }
 
-            [Description("The Discord emoji string for this move type.")]
+            [Description("El código de emoji de Discord para este tipo de movimiento.")]
             public string EmojiCode { get; set; }
 
             public MoveTypeEmojiInfo() { }
@@ -254,27 +297,29 @@ namespace SysBot.Pokemon
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public class EmojiInfo
         {
-            [Description("The full string for the emoji.")]
-            [DisplayName("Emoji Code")]
+            [Description("La cadena completa para el emoji.")]
+            [DisplayName("Código de Emoji")]
             public string EmojiString { get; set; } = string.Empty;
 
             public override string ToString()
             {
-                return string.IsNullOrEmpty(EmojiString) ? "Not Set" : EmojiString;
+                return string.IsNullOrEmpty(EmojiString) ? "No establecido" : EmojiString;
             }
+
         }
 
         [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidPresetFiltersCategory>))]
         public class RotatingRaidPresetFiltersCategory
         {
-            public override string ToString() => "Embed Toggles";
+            public override string ToString() => "Alternar Embed";
 
-            [Category(Hosting), Description("Will show Move Type Icons next to moves in trade embed (Discord only).  Requires user to upload the emojis to their server.")]
-            [DisplayName("Use Move Type Emoji's?")]
+            [Category("Hosting"), Description("Mostrará iconos de tipo de movimiento junto a los movimientos en la integración de intercambio (solo en Discord). Requiere que el usuario suba los emojis a su servidor.")]
+            [DisplayName("¿Usar emojis de tipo de movimiento?")]
             public bool MoveTypeEmojis { get; set; } = true;
 
-            [Category(Hosting), Description("Custom Emoji information for the move types.")]
-            [DisplayName("Custom Move Type Emoji's")]
+            [Category("Hosting"), Description("Información personalizada de emojis para los tipos de movimiento.")]
+            [DisplayName("Emojis personalizados de tipo de movimiento")]
+
             public List<MoveTypeEmojiInfo> CustomTypeEmojis { get; set; } =
             [
             new(MoveType.Bug),
@@ -361,202 +406,222 @@ namespace SysBot.Pokemon
                 "PP Up"
             };
 
-            [Category(Hosting), Description("Amount of time (in seconds) to post a requested raid embed.")]
-            [DisplayName("Post User Request Embeds in...")]
+            [Category("Hosting"), Description("Cantidad de tiempo (en segundos) para publicar una integración de incursión solicitada.")]
+            [DisplayName("Publicar Integraciones de Solicitudes de Usuario en...")]
             public int RequestEmbedTime { get; set; } = 30;
 
-            [Category(FeatureToggle), Description("When enabled, the bot will attempt take screenshots for the Raid Embeds. If you experience crashes often about \"Size/Parameter\" try setting this to false.")]
-            [DisplayName("Use Screenshots?")]
+            [Category("FeatureToggle"), Description("Cuando está habilitado, el bot intentará tomar capturas de pantalla para las integraciones de incursión. Si experimentas fallos a menudo sobre \"Tamaño/Parámetro\" intenta configurarlo como falso.")]
+            [DisplayName("¿Usar Capturas de Pantalla?")]
             public bool TakeScreenshot { get; set; } = true;
 
-            [Category(Hosting), Description("Delay in milliseconds for capturing a screenshot once in the raid.\n 0 Captures the Raid Mon Up close.\n3500 Captures Players Only.\n10000 Captures players and Raid Mon.")]
-            [DisplayName("Screenshot Timing (Non Gif Imgs)")]
+            [Category("Hosting"), Description("Retraso en milisegundos para capturar una captura de pantalla una vez en la incursión.\n 0 Captura el Pokémon de la incursión de cerca.\n3500 Captura solo a los jugadores.\n10000 Captura a los jugadores y al Pokémon de la incursión.")]
+            [DisplayName("Tiempo de Captura de Pantalla (Imágenes no Gif)")]
             public ScreenshotTimingOptions ScreenshotTiming { get; set; } = ScreenshotTimingOptions._3500;
 
-            [Category(FeatureToggle), Description("When enabled, the bot will snap an animated image (gif) of what's happening once inside the raid, instead of a standard still img.")]
-            [DisplayName("Use Gif Screenshots?")]
+            [Category("FeatureToggle"), Description("Cuando está habilitado, el bot tomará una imagen animada (gif) de lo que está sucediendo una vez dentro de la incursión, en lugar de una imagen estática estándar.")]
+            [DisplayName("¿Usar Capturas de Pantalla Gif?")]
             public bool AnimatedScreenshot { get; set; } = true;
 
-            [Category(FeatureToggle), Description("Amount of frames to capture for the embed.  20-30 is a good number.")]
-            [DisplayName("Frames to Capture (Gif's Only)")]
+            [Category("FeatureToggle"), Description("Cantidad de fotogramas a capturar para la integración. 20-30 es un buen número.")]
+            [DisplayName("Fotogramas a Capturar (Solo Gifs)")]
             public int Frames { get; set; } = 30;
 
-            [Category(FeatureToggle), Description("Quality of the GIF. Higher quality means larger file size.")]
-            [DisplayName("GIF Quality")]
+            [Category("FeatureToggle"), Description("Calidad del GIF. Mayor calidad significa mayor tamaño de archivo.")]
+            [DisplayName("Calidad del GIF")]
             public GifQuality GifQuality { get; set; } = GifQuality.Default;
 
-            [Category(FeatureToggle), Description("When enabled, the bot will hide the raid code from the Discord embed.")]
+            [Category("FeatureToggle"), Description("Cuando está habilitado, el bot ocultará el código de la incursión en la integración de Discord.")]
             public bool HideRaidCode { get; set; } = false;
 
-            [Category("Customization"), Description("Custom message to display for the raid rotation warning.")]
+            [Category("Customization"), Description("Mensaje personalizado para mostrar en la advertencia de rotación de incursión.")]
             public string CustomRaidRotationMessage { get; set; } = "";
         }
 
         [Category("MysteryRaids"), TypeConverter(typeof(ExpandableObjectConverter))]
         public class MysteryRaidsSettings
         {
+
+            [DisplayName("Combatientes de Tipo Tera")]
             [TypeConverter(typeof(ExpandableObjectConverter))]
-            [DisplayName("3 Star Progress Settings")]
+            public TeraTypeBattlers TeraTypeBattlers { get; set; } = new TeraTypeBattlers();
+
+            [TypeConverter(typeof(ExpandableObjectConverter))]
+            [DisplayName("Configuraciones de Progreso de 3 Estrellas")]
             public Unlocked3StarSettings Unlocked3StarSettings { get; set; } = new Unlocked3StarSettings();
 
             [TypeConverter(typeof(ExpandableObjectConverter))]
-            [DisplayName("4 Star Progress Settings")]
+            [DisplayName("Configuraciones de Progreso de 4 Estrellas")]
             public Unlocked4StarSettings Unlocked4StarSettings { get; set; } = new Unlocked4StarSettings();
 
             [TypeConverter(typeof(ExpandableObjectConverter))]
-            [DisplayName("5 Star Progress Settings")]
+            [DisplayName("Configuraciones de Progreso de 5 Estrellas")]
             public Unlocked5StarSettings Unlocked5StarSettings { get; set; } = new Unlocked5StarSettings();
 
             [TypeConverter(typeof(ExpandableObjectConverter))]
-            [DisplayName("6 Star Progress Settings")]
+            [DisplayName("Configuraciones de Progreso de 6 Estrellas")]
             public Unlocked6StarSettings Unlocked6StarSettings { get; set; } = new Unlocked6StarSettings();
 
-            public override string ToString() => "Mystery Raids Settings";
+            public override string ToString() => "Configuraciones de Incursiones Misteriosas";
         }
 
         public class Unlocked3StarSettings
         {
-            [DisplayName("Enable 3 Star Progress Mystery Raids?")]
+            [DisplayName("¿Habilitar Progreso de Incursiones Misteriosas de 3 Estrellas?")]
             public bool Enabled { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 1* Raids in 3* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 1* en Incursiones Desbloqueadas de 3*.")]
             public bool Allow1StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 2* Raids in 3* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 2* en Incursiones Desbloqueadas de 3*.")]
             public bool Allow2StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 3* Raids in 3* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 3* en Incursiones Desbloqueadas de 3*.")]
             public bool Allow3StarRaids { get; set; } = true;
 
-            public override string ToString() => "3* Raids Settings";
+            public override string ToString() => "Configuraciones de Incursiones de 3 Estrellas";
         }
 
         public class Unlocked4StarSettings
         {
-            [DisplayName("Enable 4 Star Progress Mystery Raids?")]
+            [DisplayName("¿Habilitar Progreso de Incursiones Misteriosas de 4 Estrellas?")]
             public bool Enabled { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 1* Raids in 4* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 1* en Incursiones Desbloqueadas de 4*.")]
             public bool Allow1StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 2* Raids in 4* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 2* en Incursiones Desbloqueadas de 4*.")]
             public bool Allow2StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 3* Raids in 4* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 3* en Incursiones Desbloqueadas de 4*.")]
             public bool Allow3StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 4* Raids in 4* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 4* en Incursiones Desbloqueadas de 4*.")]
             public bool Allow4StarRaids { get; set; } = true;
 
-            public override string ToString() => "4* Raids Settings";
+            public override string ToString() => "Configuraciones de Incursiones de 4 Estrellas";
         }
 
         [Category("MysteryRaids"), TypeConverter(typeof(ExpandableObjectConverter))]
         public class Unlocked5StarSettings
         {
-            [DisplayName("Enable 5 Star Progress Mystery Raids?")]
+            [DisplayName("¿Habilitar Progreso de Incursiones Misteriosas de 5 Estrellas?")]
             public bool Enabled { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 3* Raids in 5* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 3* en Incursiones Desbloqueadas de 5*.")]
             public bool Allow3StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 4* Raids in 5* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 4* en Incursiones Desbloqueadas de 5*.")]
             public bool Allow4StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 5* Raids in 5* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 5* en Incursiones Desbloqueadas de 5*.")]
             public bool Allow5StarRaids { get; set; } = true;
 
-            public override string ToString() => "5* Raids Settings";
+            public override string ToString() => "Configuraciones de Incursiones de 5 Estrellas";
         }
 
         [Category("MysteryRaids"), TypeConverter(typeof(ExpandableObjectConverter))]
         public class Unlocked6StarSettings
         {
-            [DisplayName("Enable 6 Star Progress Mystery Raids?")]
+            [DisplayName("¿Habilitar Progreso de Incursiones Misteriosas de 6 Estrellas?")]
             public bool Enabled { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 3* Raids in 6* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 3* en Incursiones Desbloqueadas de 6*.")]
             public bool Allow3StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 4* Raids in 6* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 4* en Incursiones Desbloqueadas de 6*.")]
             public bool Allow4StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 5* Raids in 6* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 5* en Incursiones Desbloqueadas de 6*.")]
             public bool Allow5StarRaids { get; set; } = true;
 
-            [Category("DifficultyLevels"), Description("Allow 6* Raids in 6* Unlocked Raids.")]
+            [Category("Niveles de Dificultad"), Description("Permitir Incursiones de 6* en Incursiones Desbloqueadas de 6*.")]
             public bool Allow6StarRaids { get; set; } = true;
 
-            public override string ToString() => "6* Raids Settings";
+            public override string ToString() => "Configuraciones de Incursiones de 6 Estrellas";
         }
 
-        [Category(Hosting), TypeConverter(typeof(CategoryConverter<LobbyFiltersCategory>))]
+        [Category("Hosting"), TypeConverter(typeof(CategoryConverter<LobbyFiltersCategory>))]
         public class LobbyFiltersCategory
         {
-            public override string ToString() => "Lobby Filters";
+            public override string ToString() => "Filtros de Lobby";
 
-            [Category(Hosting), Description("OpenLobby - Opens the Lobby after x Empty Lobbies\nSkipRaid - Moves on after x losses/empty Lobbies\nContinue - Continues hosting the raid")]
-            [DisplayName("Lobby Method")]
-            public LobbyMethodOptions LobbyMethod { get; set; } = LobbyMethodOptions.SkipRaid; // Changed the property name here
+            [Category("Hosting"), Description("OpenLobby - Abre el lobby después de x lobbies vacíos\nSkipRaid - Pasa a la siguiente después de x pérdidas/lobbies vacíos\nContinue - Continúa hospedando la incursión")]
+            [DisplayName("Método de Lobby")]
+            public LobbyMethodOptions LobbyMethod { get; set; } = LobbyMethodOptions.SkipRaid;
 
-            [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts an uncoded raid. Default is 3 raids.")]
-            [DisplayName("Empty Raid Limit")]
-            public int EmptyRaidLimit { get; set; } = 3;
+            private int _raidLimit = 3;
 
-            [Category(Hosting), Description("Empty/Lost raid limit per parameter before the bot moves on to the next one. Default is 3 raids.")]
-            [DisplayName("Skip Raid Limit")]
-            public int SkipRaidLimit { get; set; } = 3;
+            [Category("Hosting"), Description("Límite de incursiones vacías por parámetro antes de que el bot aloje una incursión sin código. El valor debe estar entre 1 y 3.")]
+            [DisplayName("Límite de Incursiones Vacías")]
+            public int EmptyRaidLimit
+            {
+                get => _raidLimit;
+                set => SetRaidLimit(value);
+            }
 
-            [Category(FeatureToggle), Description("Set the action you would want your bot to perform. 'AFK' will make the bot idle, while 'MashA' presses A every 3.5s")]
-            [DisplayName("A Button Action")]
+            [Category("Hosting"), Description("Límite de incursiones vacías/perdidas por parámetro antes de que el bot pase a la siguiente. El valor debe estar entre 1 y 3.")]
+            [DisplayName("Límite para Saltar Incursiones")]
+            public int SkipRaidLimit
+            {
+                get => _raidLimit;
+                set => SetRaidLimit(value);
+            }
+
+            private void SetRaidLimit(int value)
+            {
+                _raidLimit = Math.Max(1, Math.Min(3, value));
+            }
+
+            [Category("FeatureToggle"), Description("Configura la acción que deseas que realice tu bot. 'AFK' hará que el bot esté inactivo, mientras que 'MashA' presiona A cada 3.5 segundos.")]
+            [DisplayName("Acción del Botón A")]
             public RaidAction Action { get; set; } = RaidAction.MashA;
 
-            [Category(FeatureToggle), Description("Delay for the 'MashA' action in seconds.  [3.5 is default]")]
-            [DisplayName("A Button Delay (Seconds)")]
-            public double MashADelay { get; set; } = 3.5;  // Default value set to 3.5 seconds
+            [Category("FeatureToggle"), Description("Retraso para la acción 'MashA' en segundos. [3.5 es el valor predeterminado]")]
+            [DisplayName("Retraso del Botón A (Segundos)")]
+            public double MashADelay { get; set; } = 3.5;  // Valor predeterminado establecido en 3.5 segundos
 
-            [Category(FeatureToggle), Description("Extra time in milliseconds to wait after Lobby Disbands in Raid before deciding to not capture the raidmon.")]
-            [DisplayName("Extra Time To Disband Raid")]
+            [Category("FeatureToggle"), Description("Tiempo extra en milisegundos para esperar después de que el lobby se disuelva en la incursión antes de decidir no capturar al raidmon.")]
+            [DisplayName("Tiempo Extra para Disolver el Lobby")]
             public int ExtraTimeLobbyDisband { get; set; } = 0;
 
-            [Category(FeatureToggle), Description("Extra time in milliseconds to wait before changing partypk.")]
-            [DisplayName("Extra Time to Prepare Raid Battler")]
+            [Category("FeatureToggle"), Description("Tiempo extra en milisegundos para esperar antes de cambiar el partypk.")]
+            [DisplayName("Tiempo Extra para Preparar al Combatiente de Incursión")]
             public int ExtraTimePartyPK { get; set; } = 0;
         }
 
-        [Category(Hosting), TypeConverter(typeof(CategoryConverter<MiscSettingsCategory>))]
+        [Category("Hosting"), TypeConverter(typeof(CategoryConverter<MiscSettingsCategory>))]
         public class MiscSettingsCategory
         {
-            public override string ToString() => "Misc. Settings";
+            public override string ToString() => "Configuraciones Misceláneas";
 
-            [Category(FeatureToggle), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
+            [Category("FeatureToggle"), Description("Configura el formato de Fecha/Hora de tu Switch en las configuraciones de Fecha/Hora. El día retrocederá automáticamente en 1 si la Fecha cambia.")]
             public DTFormat DateTimeFormat { get; set; } = DTFormat.MMDDYY;
 
-            [Category(Hosting), Description("When enabled, the bot will use the overshoot method to apply rollover correction, otherwise will use DDOWN clicks.")]
+            [Category("Hosting"), Description("Cuando está habilitado, el bot usará el método de overshoot para aplicar la corrección de rollover, de lo contrario usará clics de DDOWN.")]
             public bool UseOvershoot { get; set; } = false;
 
-            [Category(Hosting), Description("Amount of times to hit DDOWN for accessing date/time settings during rollover correction. [Default: 39 Clicks]")]
+            [Category("Hosting"), Description("Cantidad de veces que se presiona DDOWN para acceder a las configuraciones de fecha/hora durante la corrección de rollover. [Predeterminado: 39 Clics]")]
             public int DDOWNClicks { get; set; } = 39;
 
-            [Category(Hosting), Description("Time to scroll down duration in milliseconds for accessing date/time settings during rollover correction. You want to have it overshoot the Date/Time setting by 1, as it will click DUP after scrolling down. [Default: 930ms]")]
+            [Category("Hosting"), Description("Tiempo para la duración del desplazamiento hacia abajo en milisegundos para acceder a las configuraciones de fecha/hora durante la corrección de rollover. Deseas que sobrepase la configuración de Fecha/Hora en 1, ya que hará clic en DUP después de desplazarse hacia abajo. [Predeterminado: 930ms]")]
             public int HoldTimeForRollover { get; set; } = 900;
 
-            [Category(Hosting), Description("When enabled, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
+            [Category("Hosting"), Description("Cuando está habilitado, inicia el bot cuando estés en la pantalla de inicio con el juego cerrado. El bot solo ejecutará la rutina de rollover para que puedas intentar configurar una sincronización precisa.")]
             public bool ConfigureRolloverCorrection { get; set; } = false;
 
-            [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
+            [Category("FeatureToggle"), Description("Cuando está habilitado, la pantalla se apagará durante el funcionamiento normal del bot para ahorrar energía.")]
             public bool ScreenOff { get; set; }
 
             private int _completedRaids;
 
-            [Category(Counts), Description("Raids Started")]
+            [Category("Counts"), Description("Incursiones Iniciadas")]
             public int CompletedRaids
             {
                 get => _completedRaids;
                 set => _completedRaids = value;
             }
 
-            [Category(Counts), Description("When enabled, the counts will be emitted when a status check is requested.")]
+            [Category("Counts"), Description("Cuando está habilitado, los conteos se emitirán cuando se solicite una verificación de estado.")]
             public bool EmitCountsOnStatusCheck { get; set; }
 
             public int AddCompletedRaids() => Interlocked.Increment(ref _completedRaids);
@@ -566,7 +631,7 @@ namespace SysBot.Pokemon
                 if (!EmitCountsOnStatusCheck)
                     yield break;
                 if (CompletedRaids != 0)
-                    yield return $"Started Raids: {CompletedRaids}";
+                    yield return $"Incursiones Iniciadas: {CompletedRaids}";
             }
         }
 

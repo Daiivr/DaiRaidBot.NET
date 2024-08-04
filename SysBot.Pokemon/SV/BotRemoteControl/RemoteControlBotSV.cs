@@ -12,10 +12,10 @@ namespace SysBot.Pokemon
         {
             try
             {
-                Log("Identifying trainer data of the host console.");
+                Log("Identificando los datos del entrenador de la consola del anfitrión");
                 await IdentifyTrainer(token).ConfigureAwait(false);
 
-                Log("Starting main loop, then waiting for commands.");
+                Log("Comenzando el bucle principal, luego esperando órdenes");
                 Config.IterateNextRoutine();
                 while (!token.IsCancellationRequested)
                 {
@@ -28,7 +28,7 @@ namespace SysBot.Pokemon
                 Log(e.Message);
             }
 
-            Log($"Ending {nameof(RemoteControlBotSV)} loop.");
+            Log($"Terminando el bucle {nameof(RemoteControlBotSV)}.");
             await HardStop().ConfigureAwait(false);
         }
 
@@ -46,7 +46,7 @@ namespace SysBot.Pokemon
             await Task.Delay(2_000, t).ConfigureAwait(false);
             if (!t.IsCancellationRequested)
             {
-                Log("Restarting the main loop.");
+                Log("Reiniciando el bucle principal");
                 await MainLoop(t).ConfigureAwait(false);
             }
         }

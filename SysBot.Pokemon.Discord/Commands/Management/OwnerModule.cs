@@ -16,85 +16,85 @@ namespace SysBot.Pokemon.Discord
         private readonly ExtraCommandUtil<T> Util = new();
 
         [Command("addSudo")]
-        [Summary("Adds mentioned user to global sudo")]
+        [Summary("Agrega al usuario mencionado a la lista global de sudo")]
         [RequireOwner]
         public async Task SudoUsers([Remainder] string _)
         {
             var users = Context.Message.MentionedUsers;
             var objects = users.Select(GetReference);
             SysCordSettings.Settings.GlobalSudoList.AddIfNew(objects);
-            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
+            await ReplyAsync("Hecho.").ConfigureAwait(false);
         }
 
         [Command("removeSudo")]
-        [Summary("Removes mentioned user from global sudo")]
+        [Summary("Elimina al usuario mencionado de la lista global de sudo")]
         [RequireOwner]
         public async Task RemoveSudoUsers([Remainder] string _)
         {
             var users = Context.Message.MentionedUsers;
             var objects = users.Select(GetReference);
             SysCordSettings.Settings.GlobalSudoList.RemoveAll(z => objects.Any(o => o.ID == z.ID));
-            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
+            await ReplyAsync("Hecho.").ConfigureAwait(false);
         }
 
         [Command("addChannel")]
-        [Summary("Adds a channel to the list of channels that are accepting commands.")]
+        [Summary("Agrega un canal a la lista de canales que aceptan comandos.")]
         [RequireOwner]
         public async Task AddChannel()
         {
             var obj = GetReference(Context.Message.Channel);
             SysCordSettings.Settings.ChannelWhitelist.AddIfNew(new[] { obj });
-            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
+            await ReplyAsync("Hecho.").ConfigureAwait(false);
         }
 
         [Command("removeChannel")]
-        [Summary("Removes a channel from the list of channels that are accepting commands.")]
+        [Summary("Elimina un canal de la lista de canales que aceptan comandos.")]
         [RequireOwner]
         public async Task RemoveChannel()
         {
             var obj = GetReference(Context.Message.Channel);
             SysCordSettings.Settings.ChannelWhitelist.RemoveAll(z => z.ID == obj.ID);
-            await ReplyAsync("<a:yes:1206485105674166292> Listo.").ConfigureAwait(false);
+            await ReplyAsync("Hecho.").ConfigureAwait(false);
         }
 
         [Command("leave")]
         [Alias("bye")]
-        [Summary("Leaves the current server.")]
+        [Summary("Abandona el servidor actual.")]
         [RequireOwner]
         public async Task Leave()
         {
-            await ReplyAsync("Goodbye.").ConfigureAwait(false);
+            await ReplyAsync("Adiós.").ConfigureAwait(false);
             await Context.Guild.LeaveAsync().ConfigureAwait(false);
         }
 
         [Command("leaveguild")]
         [Alias("lg")]
-        [Summary("Leaves guild based on supplied ID.")]
+        [Summary("Abandona el servidor basado en el ID suministrado.")]
         [RequireOwner]
         public async Task LeaveGuild(string userInput)
         {
             if (!ulong.TryParse(userInput, out ulong id))
             {
-                await ReplyAsync("<a:warning:1206483664939126795> Proporcione una identificación válida de servidor!").ConfigureAwait(false);
+                await ReplyAsync("Por favor, proporciona un ID de servidor válido.").ConfigureAwait(false);
                 return;
             }
             var guild = Context.Client.Guilds.FirstOrDefault(x => x.Id == id);
             if (guild is null)
             {
-                await ReplyAsync($"<a:yes:1206485105674166292> La entrada proporcionada ({userInput}) no es un ID de server válido o el bot no está en el servidor especificado.").ConfigureAwait(false);
+                await ReplyAsync($"La entrada proporcionada ({userInput}) no es un ID de servidor válido o el bot no está en el servidor especificado.").ConfigureAwait(false);
                 return;
             }
 
-            await ReplyAsync($"<a:yes:1206485105674166292> Abandonando {guild}.").ConfigureAwait(false);
+            await ReplyAsync($"Saliendo de {guild}.").ConfigureAwait(false);
             await guild.LeaveAsync().ConfigureAwait(false);
         }
 
         [Command("leaveall")]
-        [Summary("Leaves all servers the bot is currently in.")]
+        [Summary("Abandona todos los servidores en los que el bot está actualmente.")]
         [RequireOwner]
         public async Task LeaveAll()
         {
-            await ReplyAsync("<a:yes:1206485105674166292> Abandonando todos los servidores.").ConfigureAwait(false);
+            await ReplyAsync("Saliendo de todos los servidores.").ConfigureAwait(false);
             foreach (var guild in Context.Client.Guilds)
             {
                 await guild.LeaveAsync().ConfigureAwait(false);
@@ -103,7 +103,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("listguilds")]
         [Alias("guildlist", "gl")]
-        [Summary("Lists all the servers the bot is in.")]
+        [Summary("Enumera todos los servidores en los que está el bot.")]
         [RequireOwner]
         public async Task ListGuilds()
         {
@@ -114,21 +114,21 @@ namespace SysBot.Pokemon.Discord
             {
                 guildList.AppendLine($"{Format.Bold($"{guild.Name}")}\nID: {guild.Id}\n");
             }
-            await Util.ListUtil(Context, "Aquí hay una lista de todos los servidores en los que se encuentra actualmente este bot.", guildList.ToString()).ConfigureAwait(false);
+            await Util.ListUtil(Context, "Aquí tienes una lista de todos los servidores en los que está el bot", guildList.ToString()).ConfigureAwait(false);
         }
 
         [Command("sudoku")]
         [Alias("kill", "shutdown")]
-        [Summary("Causes the entire process to end itself!")]
+        [Summary("Hace que todo el proceso termine!")]
         [RequireOwner]
         public async Task ExitProgram()
         {
-            await Context.Channel.EchoAndReply("<a:yes:1206485105674166292> Cerrando... ¡adiós! **Los servicios del bot se están desconectando.**").ConfigureAwait(false);
+            await Context.Channel.EchoAndReply("Apagando... ¡adiós! **Los servicios del bot están desconectándose.**").ConfigureAwait(false);
             Environment.Exit(0);
         }
 
         [Command("dm")]
-        [Summary("Sends a direct message to a specified user.")]
+        [Summary("Envía un mensaje directo a un usuario específico.")]
         [RequireOwner]
         public async Task DMUserAsync(SocketUser user, [Remainder] string message)
         {
@@ -155,7 +155,7 @@ namespace SysBot.Pokemon.Discord
 
             var embed = new EmbedBuilder
             {
-                Title = "<a:Megaphone:1218248132954030141> Mensaje privado del propietario del bot",
+                Title = "Mensaje privado del propietario del bot",
                 Description = $"### Mensaje:\n{message}",
                 Color = Color.Gold,
                 Timestamp = DateTimeOffset.Now,
@@ -186,19 +186,19 @@ namespace SysBot.Pokemon.Discord
 
                 await dmChannel.SendMessageAsync(embed: embed.Build());
 
-                var confirmationMessage = await ReplyAsync($"<a:yes:1206485105674166292> Mensaje enviado exitosamente a **{user.Username}**.");
+                var confirmationMessage = await ReplyAsync($"Mensaje enviado exitosamente a **{user.Username}**.");
                 await Context.Message.DeleteAsync();
                 await Task.Delay(TimeSpan.FromSeconds(10));
                 await confirmationMessage.DeleteAsync();
             }
             catch (Exception ex)
             {
-                await ReplyAsync($"<a:warning:1206483664939126795> No se pudo enviar el mensaje a **{user.Username}**. Error: {ex.Message}");
+                await ReplyAsync($"No se pudo enviar el mensaje a **{user.Username}**. Error: {ex.Message}");
             }
         }
 
         [Command("say")]
-        [Summary("Sends a message to a specified channel.")]
+        [Summary("Envía un mensaje a un canal especificado.")]
         [RequireSudo]
         public async Task SayAsync([Remainder] string message)
         {
@@ -209,7 +209,7 @@ namespace SysBot.Pokemon.Discord
             var indexOfChannelMentionEnd = message.LastIndexOf('>');
             if (indexOfChannelMentionStart == -1 || indexOfChannelMentionEnd == -1)
             {
-                await ReplyAsync($"<a:warning:1206483664939126795> {Context.User.Mention}, por favor mencione un canal correctamente usando #channel.");
+                await ReplyAsync($"{Context.User.Mention}, por favor mencione un canal correctamente usando #channel.");
                 return;
             }
 
@@ -220,13 +220,13 @@ namespace SysBot.Pokemon.Discord
 
             if (channel == null)
             {
-                await ReplyAsync("<a:no:1206485104424128593> Canal no encontrado.");
+                await ReplyAsync("Canal no encontrado.");
                 return;
             }
 
             if (channel is not IMessageChannel messageChannel)
             {
-                await ReplyAsync("<a:warning:1206483664939126795> El canal mencionado no es un canal de texto.");
+                await ReplyAsync("El canal mencionado no es un canal de texto.");
                 return;
             }
 
@@ -247,7 +247,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             // Send confirmation message to the user
-            await ReplyAsync($"<a:yes:1206485105674166292> {Context.User.Mention}, mensaje publicado exitosamente en {channelMention}.");
+            await ReplyAsync($"{Context.User.Mention}, mensaje publicado exitosamente en {channelMention}.");
         }
 
         private RemoteControlAccess GetReference(IUser channel) => new()

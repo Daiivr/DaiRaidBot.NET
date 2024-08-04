@@ -32,7 +32,7 @@ namespace SysBot.Pokemon
             {
                 var protocol = Config.Connection.Protocol;
                 var msg = protocol is SwitchProtocol.WiFi ? "sys-botbase" : "usb-botbase";
-                msg += $" version is not supported. Expected version {BotbaseVersion} or greater, and current version is {version}. Please download the latest version from: ";
+                msg += $" La versión no es compatible. Versión esperada {BotbaseVersion} o mayor, y la versión actual es {version}. Descargue la última versión desde: ";
                 if (protocol is SwitchProtocol.WiFi)
                     msg += "https://github.com/olliz0r/sys-botbase/releases/latest";
                 else
@@ -48,7 +48,7 @@ namespace SysBot.Pokemon
 
         public async Task CheckForRAMShiftingApps(CancellationToken token)
         {
-            Log("Trainer data is not valid.");
+            Log("Los datos del entrenador no son válidos.");
 
             bool found = false;
             var msg = "";
@@ -69,7 +69,7 @@ namespace SysBot.Pokemon
             {
                 msg += ".";
                 Log(msg);
-                Log("Elimine las aplicaciones que interfieren y reinicie el Switch.");
+                Log("Por favor, elimine las aplicaciones que interfieren y reinicie la cansola.");
             }
         }
     }

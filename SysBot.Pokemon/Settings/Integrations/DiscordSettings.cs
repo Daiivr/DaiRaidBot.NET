@@ -11,53 +11,53 @@ namespace SysBot.Pokemon
         private const string Roles = nameof(Roles);
         private const string Users = nameof(Users);
 
-        public override string ToString() => "Discord Integration Settings";
+        public override string ToString() => "Configuración de integración de Discord";
 
         // Startup
 
-        [Category(Startup), Description("Bot login token.")]
+        [Category(Startup), Description("Token de inicio de sesión del bot.")]
         public string Token { get; set; } = string.Empty;
 
-        [Category(Startup), Description("Bot command prefix.")]
+        [Category(Startup), Description("Prefijo de comando de bot.")]
         public string CommandPrefix { get; set; } = "$";
 
-        [Category(Startup), Description("Toggle to handle commands asynchronously or synchronously.")]
+        [Category(Startup), Description("Alternar para manejar comandos de forma asincrónica o sincrónica.")]
         public bool AsyncCommands { get; set; }
 
-        [Category(Startup), Description("Custom Status for playing a game.")]
-        public string BotGameStatus { get; set; } = "Hosting S/V Raids";
+        [Category(Startup), Description("Estado personalizado para jugar un juego.")]
+        public string BotGameStatus { get; set; } = "Hosteando Incurciones de S/V";
 
-        [Category(Operation), Description("Custom message the bot will reply with when a user says hello to it. Use string formatting to mention the user in the reply.")]
-        public string HelloResponse { get; set; } = "Hello, {0}!  I'm online!";
+        [Category(Operation), Description("Mensaje personalizado con el que el bot responderá cuando un usuario le diga hola. Utiliza el formato de cadena para mencionar al usuario en la respuesta.")]
+        public string HelloResponse { get; set; } = "Hola, {0}!  Estoy online!";
 
         // Whitelists
-        [Category(Roles), Description("Users with this role are allowed to enter the Raid queue.")]
+        [Category(Roles), Description("Los usuarios con este rol pueden entrar en la cola de Raid.")]
         public RemoteControlAccessList RoleRaidRequest { get; set; } = new() { AllowIfEmpty = false };
 
         [Browsable(false)]
-        [Category(Roles), Description("Users with this role are allowed to remotely control the console (if running as Remote Control Bot.")]
+        [Category(Roles), Description("Los usuarios con este rol pueden controlar remotamente la consola (si se ejecuta como Remote Control Bot).")]
         public RemoteControlAccessList RoleRemoteControl { get; set; } = new() { AllowIfEmpty = false };
 
-        [Category(Roles), Description("Users with this role are allowed to bypass command restrictions.")]
+        [Category(Roles), Description("Los usuarios con este rol pueden saltarse las restricciones de comandos.")]
         public RemoteControlAccessList RoleSudo { get; set; } = new() { AllowIfEmpty = false };
 
         // Operation
-        [Category(Users), Description("Users with these user IDs cannot use the bot.")]
+        [Category(Users), Description("Los usuarios con estos ID de usuario no pueden utilizar el bot.")]
         public RemoteControlAccessList UserBlacklist { get; set; } = new();
 
-        [Category(Channels), Description("Channels with these IDs are the only channels where the bot acknowledges commands.")]
+        [Category(Channels), Description("Los canales con estos IDs son los únicos canales en los que el bot reconoce los comandos.")]
         public RemoteControlAccessList ChannelWhitelist { get; set; } = new();
 
-        [Category(Users), Description("Comma separated Discord user IDs that will have sudo access to the Bot Hub.")]
+        [Category(Users), Description("IDs de usuario de Discord separados por comas que tendrán acceso sudo al Bot Hub.")]
         public RemoteControlAccessList GlobalSudoList { get; set; } = new();
 
-        [Category(Users), Description("Disabling this will remove global sudo support.")]
+        [Category(Users), Description("Deshabilitar esto eliminará el soporte global de sudo.")]
         public bool AllowGlobalSudo { get; set; } = true;
 
-        [Category(Channels), Description("Channel IDs that will echo the log bot data.")]
+        [Category(Channels), Description("IDs de canal que se harán eco de los datos del bot de registro.")]
         public RemoteControlAccessList LoggingChannels { get; set; } = new();
 
-        [Category(Channels), Description("Raid Embed Channels.")]
+        [Category(Channels), Description("Canales de Embeds de Raid.")]
         public RemoteControlAccessList EchoChannels { get; set; } = new();
 
         public AnnouncementSettingsCategory AnnouncementSettings { get; set; } = new();
@@ -65,20 +65,20 @@ namespace SysBot.Pokemon
         [Category(Operation), TypeConverter(typeof(CategoryConverter<AnnouncementSettingsCategory>))]
         public class AnnouncementSettingsCategory
         {
-            public override string ToString() => "Announcement Settings";
+            public override string ToString() => "Configuración de anuncios";
 
-            [Category("Embed Settings"), Description("Thumbnail option for announcements.")]
+            [Category("Embed Settings"), Description("Opción de miniaturas para los anuncios.")]
             public ThumbnailOption AnnouncementThumbnailOption { get; set; } = ThumbnailOption.Gengar;
 
-            [Category("Embed Settings"), Description("Custom thumbnail URL for announcements.")]
+            [Category("Embed Settings"), Description("URL en miniatura personalizada para anuncios.")]
             public string CustomAnnouncementThumbnailUrl { get; set; } = string.Empty;
 
             public EmbedColorOption AnnouncementEmbedColor { get; set; } = EmbedColorOption.Blue;
 
-            [Category("Embed Settings"), Description("Enable random thumbnail selection for announcements.")]
+            [Category("Embed Settings"), Description("Activar la selección aleatoria de miniaturas para los anuncios.")]
             public bool RandomAnnouncementThumbnail { get; set; } = false;
 
-            [Category("Embed Settings"), Description("Enable random color selection for announcements.")]
+            [Category("Embed Settings"), Description("Activar la selección aleatoria de colores para los anuncios.")]
             public bool RandomAnnouncementColor { get; set; } = false;
         }
     }

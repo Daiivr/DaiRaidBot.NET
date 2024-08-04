@@ -21,14 +21,14 @@ namespace SysBot.Pokemon.Discord
 
             // Check if this user is a Guild User, which is the only context where roles exist
             if (context.User is not SocketGuildUser gUser)
-                return Task.FromResult(PreconditionResult.FromError("<a:warning:1206483664939126795> Debes estar en un servidor para ejecutar este comando."));
+                return Task.FromResult(PreconditionResult.FromError("Debes estar en un servidor para ejecutar este comando."));
 
             // If this command was executed by a user with the appropriate role, return a success
             if (gUser.Roles.Any(r => r.Name == _name))
                 return Task.FromResult(PreconditionResult.FromSuccess());
 
             // Since it wasn't, fail
-            return Task.FromResult(PreconditionResult.FromError($"<a:warning:1206483664939126795> Debe tener un rol llamado {_name} para ejecutar este comando."));
+            return Task.FromResult(PreconditionResult.FromError($"Debe tener un rol llamado {_name} para ejecutar este comando."));
         }
     }
 }
