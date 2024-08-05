@@ -406,9 +406,30 @@ namespace SysBot.Pokemon
                 "PP Up"
             };
 
-            [Category("Hosting"), Description("Cantidad de tiempo (en segundos) para publicar una integración de incursión solicitada.")]
-            [DisplayName("Publicar Integraciones de Solicitudes de Usuario en...")]
-            public int RequestEmbedTime { get; set; } = 30;
+            private RequestEmbedTimingOptions _requestEmbedTime = RequestEmbedTimingOptions._3500;
+
+            [Category(Hosting)]
+            [Description("Cantidad de tiempo (en milisegundos) para publicar un embed de incursión solicitada.")]
+            [DisplayName("Publicar embeds de Solicitudes de Usuarios en...")]
+            public RequestEmbedTimingOptions RequestEmbedTime
+            {
+                get => _requestEmbedTime;
+                set
+                {
+                    if (value != RequestEmbedTimingOptions._2500 &&
+                        value != RequestEmbedTimingOptions._3000 &&
+                        value != RequestEmbedTimingOptions._3500 &&
+                        value != RequestEmbedTimingOptions._4000 &&
+                        value != RequestEmbedTimingOptions._4500)
+                    {
+                        _requestEmbedTime = RequestEmbedTimingOptions._3500;
+                    }
+                    else
+                    {
+                        _requestEmbedTime = value;
+                    }
+                }
+            }
 
             [Category("FeatureToggle"), Description("Cuando está habilitado, el bot intentará tomar capturas de pantalla para las integraciones de incursión. Si experimentas fallos a menudo sobre \"Tamaño/Parámetro\" intenta configurarlo como falso.")]
             [DisplayName("¿Usar Capturas de Pantalla?")]
