@@ -1633,6 +1633,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 await GoHome(Hub.Config, token).ConfigureAwait(false);
                 await AdvanceDaySV(token).ConfigureAwait(false);
                 await SaveGame(Hub.Config, token).ConfigureAwait(false);
+                await RecoverToOverworld(token).ConfigureAwait(false);
                 shouldRefreshMap = false;
                 if (!token.IsCancellationRequested)
                 {
@@ -1657,6 +1658,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                     return 2;
                 }
 
+                await Task.Delay(4_000, token).ConfigureAwait(false);
                 Log("Inyectando la semilla correcta");
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
                 await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
