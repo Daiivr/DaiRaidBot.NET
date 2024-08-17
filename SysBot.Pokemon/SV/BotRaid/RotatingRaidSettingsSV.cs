@@ -342,44 +342,44 @@ namespace SysBot.Pokemon
             new(MoveType.Fairy),
             ];
 
-            [Category(Hosting), Description("The full string for the male gender emoji. Leave blank to not use.")]
-            [DisplayName("Male Emoji Code")]
+            [Category(Hosting), Description("La cadena completa para el emoji de género masculino. Déjalo en blanco para no usarlo.")]
+            [DisplayName("Emoji Masculino")]
             public EmojiInfo MaleEmoji { get; set; } = new EmojiInfo();
 
-            [Category(Hosting), Description("The full string for the female gender emoji. Leave blank to not use.")]
-            [DisplayName("Female Emoji Code")]
+            [Category(Hosting), Description("La cadena completa para el emoji de género femenino. Déjalo en blanco para no usarlo.")]
+            [DisplayName("Emoji Femenino")]
             public EmojiInfo FemaleEmoji { get; set; } = new EmojiInfo();
 
-            [Category(Hosting), Description("Raid embed description will be shown on every raid posted at the top of the embed.")]
-            [DisplayName("Raid Embed Description")]
+            [Category(Hosting), Description("La descripción del embed de incursión se mostrará en cada incursión publicada en la parte superior del embed.")]
+            [DisplayName("Descripción del Embed de Incursión")]
             public string[] RaidEmbedDescription { get; set; } = Array.Empty<string>();
 
-            [Category(FeatureToggle), Description("Choose the TeraType Icon set to use in the author area of the embed.  Icon1 are custom, Icon2 is not.")]
-            [DisplayName("Tera Icon Choice")]
+            [Category(FeatureToggle), Description("Elige el conjunto de iconos de TeraType a usar en el área del autor en el embed. Icon1 son personalizados, Icon2 no lo es.")]
+            [DisplayName("Elección del Icono Tera")]
             public TeraIconType SelectedTeraIconType { get; set; } = TeraIconType.Icon1;
 
-            [Category(Hosting), Description("If true, the bot will show Moves on embeds.")]
-            [DisplayName("Include Moves/Extra Moves in Embed?")]
+            [Category(Hosting), Description("Si es verdadero, el bot mostrará movimientos en los embeds.")]
+            [DisplayName("¿Incluir Movimientos/Movimientos Extra en el Embed?")]
             public bool IncludeMoves { get; set; } = true;
 
-            [Category(Hosting), Description("When true, the embed will display current seed.")]
-            [DisplayName("Include Current Seed in Embed?")]
+            [Category(Hosting), Description("Cuando es verdadero, el embed mostrará la semilla actual.")]
+            [DisplayName("¿Incluir Semilla Actual en el Embed?")]
             public bool IncludeSeed { get; set; } = true;
 
-            [Category(FeatureToggle), Description("When enabled, the embed will countdown the amount of seconds in \"TimeToWait\" until starting the raid.")]
-            [DisplayName("Include Countdown Timer in Embed?")]
+            [Category(FeatureToggle), Description("Cuando está habilitado, el embed hará una cuenta regresiva de la cantidad de segundos en \"TimeToWait\" hasta que comience la incursión.")]
+            [DisplayName("¿Incluir Temporizador de Cuenta Regresiva en el Embed?")]
             public bool IncludeCountdown { get; set; } = true;
 
-            [Category(Hosting), Description("If true, the bot will show Type Advantages on embeds.")]
-            [DisplayName("Include Type Advantage Hints in Embed?")]
+            [Category(Hosting), Description("Si es verdadero, el bot mostrará las ventajas de tipo en los embeds.")]
+            [DisplayName("¿Incluir Pistas de Ventaja de Tipo en el Embed?")]
             public bool IncludeTypeAdvantage { get; set; } = true;
 
-            [Category(Hosting), Description("If true, the bot will show Special Rewards on embeds.")]
-            [DisplayName("Include Rewards in Embed?")]
+            [Category(Hosting), Description("Si es verdadero, el bot mostrará recompensas especiales en los embeds.")]
+            [DisplayName("¿Incluir Recompensas en el Embed?")]
             public bool IncludeRewards { get; set; } = true;
 
-            [Category(Hosting), Description("Select which rewards to display in the embed.")]
-            [DisplayName("Rewards To Show")]
+            [Category(Hosting), Description("Selecciona qué recompensas mostrar en el embed.")]
+            [DisplayName("Recompensas a Mostrar")]
             public List<string> RewardsToShow { get; set; } = new List<string>
             {
                 "Rare Candy",
@@ -454,7 +454,7 @@ namespace SysBot.Pokemon
             [Category("FeatureToggle"), Description("Cuando está habilitado, el bot ocultará el código de la incursión en la integración de Discord.")]
             public bool HideRaidCode { get; set; } = false;
 
-            [Category("Customization"), Description("Mensaje personalizado para mostrar en la advertencia de rotación de incursión.")]
+            [Category("Customization"), Description("Mensaje personalizado para mostrar en el footer del Embed."), DisplayName("Mensaje a mostras al final del Embed.")]
             public string CustomRaidRotationMessage { get; set; } = "";
         }
 

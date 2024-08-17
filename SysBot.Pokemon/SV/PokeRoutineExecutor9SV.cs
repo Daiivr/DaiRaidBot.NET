@@ -406,107 +406,107 @@ namespace SysBot.Pokemon.SV
             List<string> rewardStrings = new();
             if (rewardsToShow.Contains("Rare Candy") && rare > 0)
             {
-                rewardStrings.Add($"<:Rare_Candy:1206467369803980820> **Caramelo Raro** x{rare}");
+                rewardStrings.Add($"`x{rare}`<:Rare_Candy:1206467369803980820> ");
             }
 
             if (rewardsToShow.Contains("Ability Capsule") && abilitycapsule > 0)
             {
-                rewardStrings.Add($"<:Ability_Capsule:1206467545293398026> **Cápsula Habilidad** x{abilitycapsule}");
+                rewardStrings.Add($"`x{abilitycapsule}`<:Ability_Capsule:1206467545293398026> ");
             }
 
             if (rewardsToShow.Contains("Bottle Cap") && bottlecap > 0)
             {
-                rewardStrings.Add($"<:Bottle_Cap:1206467665510801438> **Chapa Plateada** x{bottlecap}");
+                rewardStrings.Add($"`x{bottlecap}`<:Bottle_Cap:1206467665510801438> ");
             }
 
             if (rewardsToShow.Contains("Ability Patch") && abilitypatch > 0)
             {
-                rewardStrings.Add($"<:Ability_Patch:1206466662094602250> **Parche habilidad** x{abilitypatch}");
+                rewardStrings.Add($"`x{abilitypatch}`<:Ability_Patch:1206466662094602250> ");
             }
 
             if (rewardsToShow.Contains("Exp. Candy L") && expCandyL > 0)
             {
-                rewardStrings.Add($"<:Candy_L:1206466614455697468> **Caramelo Exp L** x{expCandyL}");
+                rewardStrings.Add($"`x{expCandyL}`<:Candy_L:1206466614455697468> ");
             }
 
             if (rewardsToShow.Contains("Exp. Candy XL") && expCandyXL > 0)
             {
-                rewardStrings.Add($"<:Candy_XL:1206466560772935780> **Caramelo Exp XL** x{expCandyXL}");
+                rewardStrings.Add($"`x{expCandyXL}`<:Candy_XL:1206466560772935780> ");
             }
 
             if (rewardsToShow.Contains("Sweet Herba Mystica") && sweetHerba > 0)
             {
-                rewardStrings.Add($"<:dulce:1084228834171293867> **Especia Dulce** x{sweetHerba}");
+                rewardStrings.Add($"`x{sweetHerba}`<:dulce:1084228834171293867> ");
             }
 
             if (rewardsToShow.Contains("Salty Herba Mystica") && saltyHerba > 0)
             {
-                rewardStrings.Add($"<:salada:1084228830920716288> **Especia Salada** x{saltyHerba}");
+                rewardStrings.Add($"`x{saltyHerba}`<:salada:1084228830920716288> ");
             }
 
             if (rewardsToShow.Contains("Sour Herba Mystica") && sourHerba > 0)
             {
-                rewardStrings.Add($"<:acida:1084228832363544637> **Especia Ácida** x{sourHerba}");
+                rewardStrings.Add($"`x{sourHerba}`<:acida:1084228832363544637> ");
             }
 
             if (rewardsToShow.Contains("Bitter Herba Mystica") && bitterHerba > 0)
             {
-                rewardStrings.Add($"<:amarga:1084228833307279400> **Especia Amarga** x{bitterHerba}");
+                rewardStrings.Add($"`x{bitterHerba}`<:amarga:1084228833307279400> ");
             }
 
             if (rewardsToShow.Contains("Spicy Herba Mystica") && spicyHerba > 0)
             {
-                rewardStrings.Add($"<:picante:1084228834611707955> **Especia Picante** x{spicyHerba}");
+                rewardStrings.Add($"`x{spicyHerba}`<:picante:1084228834611707955> ");
             }
 
             if (rewardsToShow.Contains("Pokeball") && pokeball > 0)
             {
-                rewardStrings.Add($"<:Pok_Ball:1206466481051664384> **Pokeball** x{pokeball}");
+                rewardStrings.Add($"`x{pokeball}`<:Pok_Ball:1206466481051664384> ");
             }
 
             if (rewardsToShow.Contains("Nugget") && nugget > 0)
             {
-                rewardStrings.Add($"<:Nugget:1206466451473694730> **Pepita** x{nugget}");
+                rewardStrings.Add($"`x{nugget}`<:Nugget:1206466451473694730> ");
             }
 
             if (rewardsToShow.Contains("Tiny Mushroom") && tinyMushroom > 0)
             {
-                rewardStrings.Add($"<:Tiny_Mushroom:1206466426391494696> **Miniseta** x{tinyMushroom}");
+                rewardStrings.Add($"`x{tinyMushroom}`<:Tiny_Mushroom:1206466426391494696> ");
             }
 
             if (rewardsToShow.Contains("Big Mushroom") && bigMushroom > 0)
             {
-                rewardStrings.Add($"<:Big_Mushroom:1206466400466505739> **Seta grande** x{bigMushroom}");
+                rewardStrings.Add($"`x{bigMushroom}`<:Big_Mushroom:1206466400466505739> ");
             }
 
             if (rewardsToShow.Contains("Pearl") && pearl > 0)
             {
-                rewardStrings.Add($"<:Perla_EP:1206471745305837578> **Perla** x{pearl}");
+                rewardStrings.Add($"`x{pearl}`<:Perla_EP:1206471745305837578> ");
             }
 
             if (rewardsToShow.Contains("Big Pearl") && bigPearl > 0)
             {
-                rewardStrings.Add($"<:Big_Pearl:1206466377607815198> **Perla Grande** x{bigPearl}");
+                rewardStrings.Add($"`x{bigPearl}`<:Big_Pearl:1206466377607815198> ");
             }
 
             if (rewardsToShow.Contains("Stardust") && stardust > 0)
             {
-                rewardStrings.Add($"<:Stardust:1206466351519240222> **Polvo Estelar** x{stardust}");
+                rewardStrings.Add($"`x{stardust}`<:Stardust:1206466351519240222> ");
             }
 
             if (rewardsToShow.Contains("Star Piece") && starPiece > 0)
             {
-                rewardStrings.Add($"<:Star_Piece:1206466325459894332> **Trozo Estrella** x{starPiece}");
+                rewardStrings.Add($"`x{starPiece}`<:Star_Piece:1206466325459894332> ");
             }
 
             if (rewardsToShow.Contains("Gold Bottle Cap") && goldBottleCap > 0)
             {
-                rewardStrings.Add($"<:Gold_Bottle_Cap:1206467769898504192> **Chapa Dorada** x{goldBottleCap}");
+                rewardStrings.Add($"`x{goldBottleCap}`<:Gold_Bottle_Cap:1206467769898504192> ");
             }
 
             if (rewardsToShow.Contains("PP Up") && ppUp > 0)
             {
-                rewardStrings.Add($"<:PP_Up:1206466236171685978> **Más PP** x{ppUp}");
+                rewardStrings.Add($"`x{ppUp}`<:PP_Up:1206466236171685978> ");
             }
 
             if (rewardsToShow.Contains("Shards"))
@@ -514,35 +514,35 @@ namespace SysBot.Pokemon.SV
                 foreach (KeyValuePair<int, int> shard in teraShards)
                 {
                     string shardTypeName = GetTeraShardTypeName(shard.Key);
-                    rewardStrings.Add($"**{shardTypeName}** x{shard.Value}");
+                    rewardStrings.Add($"`x{shard.Value}`{shardTypeName} ");
                 }
             }
 
-            return string.Join("\n", rewardStrings);
+            return string.Join("", rewardStrings);
         }
 
         private static string GetTeraShardTypeName(int shardType)
         {
             return shardType switch
             {
-                1862 => "<:Normal_Shard:1206465752769757194> Teralito Normal",
-                1868 => "<:Fighting_Shard:1206464834674098188> Teralito Lucha",
-                1871 => "<:Flying_Shard:1206464825933434911> Teralito Volador",
-                1869 => "<:Poison_Shard:1206464829146271755> Teralito Veneno",
-                1870 => "<:Ground_Shard:1206465893115371561> Teralito Tierra",
-                1874 => "<:Rock_Shard:1206464822657417226> Teralito Roca",
-                1873 => "<:Bug_Shard:1206464823529971742> Teralito Bicho",
-                1875 => "<:Ghost_Shard:1206464821873348648> Teralito Fantasma",
-                1878 => "<:Steel_Shard:1206464819004440647> Teralito Acero",
-                1863 => "<:Fire_Shard:1206464844295835688> Teralito Fuego",
-                1864 => "<:Water_Shard:1206465800442089543> Teralito Agua",
-                1866 => "<:Grass_Shard:1206465852728283306> Teralito Planta",
-                1865 => "<:Electric_Shard:1206464840563163182> Teralito Eléctrico",
-                1872 => "<:Psychic_Shard:1206465948396032041> Teralito Psíquico",
-                1867 => "<:Ice_Shard:1206464836104364113> Teralito Hielo",
-                1876 => "<:Dragon_Shard:1206464821101330442> Teralito Dragón",
-                1877 => "<:Dark_Shard:1206464819880796231> Teralito Siniestro",
-                1879 => "<:Fairy_Shard:1206464818312126536> Teralito Hada",
+                1862 => "<:Normal_Shard:1206465752769757194>",
+                1868 => "<:Fighting_Shard:1206464834674098188>",
+                1871 => "<:Flying_Shard:1206464825933434911>",
+                1869 => "<:Poison_Shard:1206464829146271755>",
+                1870 => "<:Ground_Shard:1206465893115371561>",
+                1874 => "<:Rock_Shard:1206464822657417226>",
+                1873 => "<:Bug_Shard:1206464823529971742>",
+                1875 => "<:Ghost_Shard:1206464821873348648>",
+                1878 => "<:Steel_Shard:1206464819004440647>",
+                1863 => "<:Fire_Shard:1206464844295835688>",
+                1864 => "<:Water_Shard:1206465800442089543>",
+                1866 => "<:Grass_Shard:1206465852728283306>",
+                1865 => "<:Electric_Shard:1206464840563163182>",
+                1872 => "<:Psychic_Shard:1206465948396032041>",
+                1867 => "<:Ice_Shard:1206464836104364113>",
+                1876 => "<:Dragon_Shard:1206464821101330442>",
+                1877 => "<:Dark_Shard:1206464819880796231>",
+                1879 => "<:Fairy_Shard:1206464818312126536>",
                 _ => "Unknown", // or handle this case as needed
             };
         }

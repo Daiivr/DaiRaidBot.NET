@@ -352,7 +352,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                         {
                             if (TodaySeed != currentSeed)
                             {
-                                Log($"La Semilla de Hoy Actual {currentSeed:X8} no coincide con la Semilla de Hoy Inicial: {TodaySeed:X8}.\nIntentando anular la Semilla de Hoy...");
+                                Log($"La Semilla de Hoy Actual {currentSeed:X8} no coincide con la Semilla de Hoy Inicial: {TodaySeed:X8}.\nIntentando cambiar la Semilla de Hoy...");
                                 TodaySeed = currentSeed;
                                 await OverrideTodaySeed(token).ConfigureAwait(false);
                                 Log("La semilla de hoy ha sido sustituida por la semilla actual.");
@@ -599,7 +599,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 Title = "Bot Reiniciando",
                 Description = "El bot encontró un problema y actualmente se está reiniciando. Por favor espere.",
                 Color = Discord.Color.Red,
-                ThumbnailUrl = "https://raw.githubusercontent.com/bdawg1989/sprites/main/imgs/x.png"
+                ThumbnailUrl = "https://i.imgur.com/ShtjFsE.png"
             };
             EchoUtil.RaidEmbed(null, "", embed);
 
@@ -881,7 +881,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit)
                 {
-                    Log($"Tuvimos {Settings.LobbyOptions.SkipRaidLimit} incursiones perdidas/vacías. ¡Seguimos adelante!");
+                    Log($"Tuvimos {Settings.LobbyOptions.SkipRaidLimit} incursion(es) perdida(s)/vacía(s). ¡Seguimos adelante!");
                     await SanitizeRotationCount(token).ConfigureAwait(false);
                     await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
                     ready = true;
@@ -1026,21 +1026,21 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task OverrideTodaySeed(CancellationToken token)
         {
-            Log("Intentando anular la Semilla de Hoy");
+            Log("Intentando cambiar la Semilla de Hoy");
 
             var todayoverride = BitConverter.GetBytes(TodaySeed);
             List<long> ptr = new(Offsets.RaidBlockPointerP);
             ptr[3] += 0x8;
             await SwitchConnection.PointerPoke(todayoverride, ptr, token).ConfigureAwait(false);
 
-            Log("Anulación de semillas de hoy completada");
+            Log("Cambio de semillas de hoy completado");
         }
 
         private async Task OverrideSeedIndex(int index, CancellationToken token)
         {
             if (index == -1)
             {
-                Log("El índice es -1, omitiendo la anulación de semillas.");
+                Log("El índice es -1, omitiendo el cambio de semillas.");
                 return;
             }
 
@@ -1721,7 +1721,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             if (!Settings.ActiveRaids[RotationCount].IsCoded || (Settings.ActiveRaids[RotationCount].IsCoded && EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby))
             {
                 if (Settings.ActiveRaids[RotationCount].IsCoded && EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethod == LobbyMethodOptions.OpenLobby)
-                    Log($"Tuvimos {Settings.LobbyOptions.EmptyRaidLimit} incursiones vacías ¡Abriendo esta incursión para todos!");
+                    Log($"Tuvimos {Settings.LobbyOptions.EmptyRaidLimit} incursion(es) vacía(s) ¡Abriendo esta incursión para todos!");
                 await Click(DDOWN, 1_000, token).ConfigureAwait(false);
             }
 
@@ -2500,7 +2500,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 uptimeFormatted = uptimeFormatted.Trim();
                 embed.WithFooter(new EmbedFooterBuilder()
                 {
-                    Text = $"Incursiones Completadas: {RaidCount} (Ganadas: {WinCount} | Perdidas: {LossCount})\nRaids Activas:: {raidsInRotationCount} | Tiempo de actividad: {uptimeFormatted}\n" + disclaimer,
+                    Text = $"Incursiones Completadas: {RaidCount} (Ganadas: {WinCount} | Perdidas: {LossCount})\nRaids Activas: {raidsInRotationCount} | Tiempo de actividad: {uptimeFormatted}\n" + disclaimer,
                     IconUrl = programIconUrl
                 });
             }
@@ -2682,7 +2682,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                             Title = "Experimentando dificultades técnicas",
                             Description = "El bot está experimentando problemas para conectarse en línea. Por favor, espere mientras intentamos resolver el problema.",
                             Color = Discord.Color.Red,
-                            ThumbnailUrl = "https://i.imgur.com/ShtjFsE.png"
+                            ThumbnailUrl = "https://i.imgur.com/F2cXCUb.png"
                         };
                         EchoUtil.RaidEmbed(null, "", embed);
                         // Waiting process
@@ -2847,9 +2847,9 @@ namespace SysBot.Pokemon.SV.BotRaid
                         Log("Los Overworld Spawns ya están activados, no es necesario hacer nada.");
                     }
                 }
-                Log($"Intentando anular la semilla para {Settings.ActiveRaids[RotationCount].Species}.");
+                Log($"Intentando cambiar la semilla para {Settings.ActiveRaids[RotationCount].Species}.");
                 await OverrideSeedIndex(SeedIndexToReplace, token).ConfigureAwait(false);
-                Log("Anulación de semilla completada");
+                Log("Cambio de semilla completado");
 
                 await Task.Delay(2_000, token).ConfigureAwait(false);
                 await LogPlayerLocation(token); // Teleports user to closest Active Den
@@ -3187,7 +3187,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
         private async Task SkipRaidOnLosses(CancellationToken token)
         {
-            Log($"Tuvimos {Settings.LobbyOptions.SkipRaidLimit} incursiones perdidas/vacías... Continuemos!");
+            Log($"Tuvimos {Settings.LobbyOptions.SkipRaidLimit} incursion(es) perdida(s)/vacía(s)... Continuemos!");
 
             await SanitizeRotationCount(token).ConfigureAwait(false);
             // Prepare and send an embed to inform users
